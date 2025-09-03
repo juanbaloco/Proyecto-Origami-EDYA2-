@@ -1,0 +1,17 @@
+﻿# Python / FastAPI
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.devcontainer/
+.env
+dev.db
+.pytest_cache/
+.coverage
+
+# VS Code
+.vscode/
+
+# SO
+.DS_Store
+Thumbs.db
