@@ -92,10 +92,12 @@ Mapa de versiones
         422 Unprocessable Entity → Error de validación
 
     Productos:
-        ![Tabla productos](img/Tablaproductos.png)
+   
+      ![Tabla productos](img/Tablaproductos.png)
 
-    Pedidos: 
-        ![Tabla pedidos](img/Tablapedidos.png)
+    Pedidos:
+   
+      ![Tabla pedidos](img/Tablapedidos.png)
 
      Ejemplo POST/ pedidos:
 
@@ -103,10 +105,12 @@ Mapa de versiones
         
     Carrito:
         En frontend, pero se persiste en backend para seguimiento:
-        ![Tabla carrito](img/Tablacarrito.png)
+   
+      ![Tabla carrito](img/Tablacarrito.png)
 
     Fidelizacion:
-        ![Fidelizacion](img/Fidelizacion.png)
+   
+      ![Fidelizacion](img/Fidelizacion.png)
 
       Ejemplo POST fidelizacion:
 
@@ -147,6 +151,7 @@ Mapa de versiones
             400 Bad request: Formato incorrecto en la solución
 
     Ejemplo de respuesta exitosa (pedido creado):
+   
     ![Ejemplo respuesta](img/Ejemploresp.png)
 
     Respuesta de error (ejemplo: email duplicado):
@@ -154,7 +159,7 @@ Mapa de versiones
     ![Respuesta error](img/RespuestaError.png).
 
 
-6) 
+7) 
     Plan de proyecto:
     Semana 11
     Registro de clientes, CRUD de productos.
@@ -170,7 +175,7 @@ Mapa de versiones
     Exportar reglas de negocio de estados (no cancelar entregados).
     Pequeñas optimizaciones y pruebas básicas.
 
-7) como ejecutar el backend:
+8) como ejecutar el backend:
     Windows
     Descargar uv: 
     powershell -ExecutionPolicy Bypass -c "irm https://astral.sh/uv/install.ps1 | iex"
@@ -200,7 +205,7 @@ Mapa de versiones
     ingresas a este link desde un navegador y listo
 
 
-8) Backend evidencias:
+9) Backend evidencias:
 
      ![Backend evidencia1](img/Backend1.png)
 
