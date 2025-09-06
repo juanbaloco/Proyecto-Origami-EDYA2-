@@ -1,4 +1,4 @@
-from fastapi import ApiRouter, HTTPException
+from fastapi import APIRouter, HTTPException
 from typing import List
 
 router = APIRouter(prefix="/carrito", tags=["Carrito"])

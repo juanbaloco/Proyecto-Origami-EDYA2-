@@ -8,7 +8,7 @@ from ...schemas.producto import ProductoCreate, ProductoUpdate, ProductoOut
 
 router = APIRouter()
 
-@router.get("", response_model=List[ProductoOut])
+@router.get("/", response_model=List[ProductoOut])
 def list_endpoint(
     response: Response,
     q: Optional[str] = None,
@@ -29,7 +29,7 @@ def get_endpoint(product_id: str):
         raise HTTPException(status_code=404, detail="Producto no encontrado")
     return p
 
-@router.post("", response_model=ProductoOut, status_code=201)
+@router.post("/", response_model=ProductoOut, status_code=201)
 def create_endpoint(payload: ProductoCreate):
     try:
         return add_product(payload.model_dump())
