@@ -212,7 +212,7 @@ Mapa de versiones
 
     Frontend evidencias:
    
-        ![Frontendevidencia](img/frontend1.png)
+    ![Frontendevidencia](img/frontend1.png)
    
-        ![Frontednevidencia2](img/Frontend2.png)
+    ![Frontednevidencia2](img/Frontend2.png)
         
