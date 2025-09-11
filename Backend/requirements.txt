@@ -3,6 +3,7 @@ uvicorn[standard]==0.30.*
 pydantic==2.*
 pydantic-settings==2.*
 pydantic[email]
+pydantic[email]
 
 
 
