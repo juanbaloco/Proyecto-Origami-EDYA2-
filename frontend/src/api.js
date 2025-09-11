@@ -18,22 +18,14 @@ export async function apiCreateProduct(payload) {
     body: JSON.stringify(payload),
   });
   const body = await safeJson(res);
-  if (!res.ok) {
-    throw new Error(formatDetail(body?.detail) || `POST productos ${res.status}`);
-  }
+  if (!res.ok) throw new Error(formatDetail(body?.detail) || `POST productos ${res.status}`);
   return body;
 }
 
-async function safeJson(res) {
-  try { return await res.json(); } catch { return null; }
-}
-
+async function safeJson(res) { try { return await res.json(); } catch { return null; } }
 function formatDetail(detail) {
   if (!detail) return "";
   if (typeof detail === "string") return detail;
-  if (Array.isArray(detail)) {
-    // Pydantic v2: detail es una lista de errores
-    return detail.map(d => d?.msg || JSON.stringify(d)).join(" | ");
-  }
+  if (Array.isArray(detail)) return detail.map(d => d?.msg || JSON.stringify(d)).join(" | ");
   return JSON.stringify(detail);
 }

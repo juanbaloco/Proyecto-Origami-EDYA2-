@@ -1,13 +1,17 @@
+# Backend/app/api/routes/productos.py
 from typing import List, Optional
 from fastapi import APIRouter, HTTPException, Query, Response
-from ...core.store import (
+from app.core.store import (
     add_product, list_products, get_product, update_product, delete_product,
     CATEGORY_SLUGS
 )
-from ...schemas.producto import ProductoCreate, ProductoUpdate, ProductoOut
+from app.schemas.producto import ProductoCreate, ProductoUpdate, ProductoOut
 
-router = APIRouter()
+# ⬇️⬇️⬇️  ESTO ES CLAVE
+router = APIRouter(prefix="/productos", tags=["productos"])
 
+# LISTAR  -> /api/productos  y  /api/productos/
+@router.get("",  response_model=List[ProductoOut])
 @router.get("/", response_model=List[ProductoOut])
 def list_endpoint(
     response: Response,
@@ -29,6 +33,8 @@ def get_endpoint(product_id: str):
         raise HTTPException(status_code=404, detail="Producto no encontrado")
     return p
 
+# CREAR  -> /api/productos  y  /api/productos/
+@router.post("", response_model=ProductoOut, status_code=201)
 @router.post("/", response_model=ProductoOut, status_code=201)
 def create_endpoint(payload: ProductoCreate):
     try:
@@ -55,4 +61,3 @@ def delete_endpoint(product_id: str):
     if not ok:
         raise HTTPException(status_code=404, detail="Producto no encontrado")
     return Response(status_code=204)
-

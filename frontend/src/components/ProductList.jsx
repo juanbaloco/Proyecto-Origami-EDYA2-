@@ -63,9 +63,9 @@ export default function ProductList() {
           <li key={p.id} className="item">
             <div className="title">{p.nombre}</div>
             <div className="sub">
-              SKU: {p.sku} · Slug: {p.slug} · Precio: $
-              {(p.precio_cent / 100).toFixed(2)} · Stock: {p.stock}
-            </div>
+  SKU: {p.sku} · Slug: {p.slug} · Precio: ${Number(p.precio).toFixed(2)} {p.activo ? "· Activo" : "· Inactivo"}
+</div>
+
           </li>
         ))}
       </ul>

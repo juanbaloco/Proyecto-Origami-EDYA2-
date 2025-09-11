@@ -1,6 +1,6 @@
 from fastapi import FastAPI
-from .core.cors import setup_cors
-from .api.routes import productos, pedidos, carrito, fidelizacion
+from app.core.cors import setup_cors
+from app.api.routes import productos, pedidos, carrito, fidelizacion
 
 app = FastAPI(title="Origami API (in-memory)", version="0.1.0")
 setup_cors(app)
@@ -9,7 +9,7 @@ setup_cors(app)
 def health():
     return {"status": "ok"}
 
-app.include_router(productos.router)
-app.include_router(pedidos.router)
-app.include_router(carrito.router)
-app.include_router(fidelizacion.router)
+app.include_router(productos.router,    prefix="/api")
+app.include_router(pedidos.router,      prefix="/api")
+app.include_router(carrito.router,      prefix="/api")
+app.include_router(fidelizacion.router, prefix="/api")

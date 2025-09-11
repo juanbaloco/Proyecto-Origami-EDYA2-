@@ -1,10 +1,7 @@
 import { useState } from "react";
 import { apiCreateProduct } from "../api";
 
-const empty = {
-  nombre: "", sku: "", slug: "",
-  precio_cent: "", stock: "", activo: true
-};
+const empty = { nombre: "", sku: "", slug: "", precio: "", activo: true };
 
 export default function ProductForm({ onCreated }) {
   const [form, setForm] = useState(empty);
@@ -22,25 +19,22 @@ export default function ProductForm({ onCreated }) {
     try {
       const payload = {
         nombre: String(form.nombre).trim(),
-        sku: String(form.sku).trim(),
+        sku: String(form.sku).trim(),     // debe ser AAA-999
         slug: String(form.slug).trim(),
-        precio_cent: Number(form.precio_cent),
-        stock: Number(form.stock),
+        precio: Number(form.precio),      // <-- AHORA 'precio' (float)
         activo: !!form.activo,
       };
-      if (!payload.nombre || !payload.sku || !payload.slug) {
+
+      if (!payload.nombre || !payload.sku || !payload.slug)
         throw new Error("Nombre, SKU y Slug son obligatorios");
-      }
-      if (!Number.isFinite(payload.precio_cent) || payload.precio_cent <= 0) {
-        throw new Error("precio_cent debe ser un número > 0");
-      }
-      if (!Number.isFinite(payload.stock) || payload.stock < 0) {
-        throw new Error("stock debe ser un número ≥ 0");
-      }
+      if (!/^[A-Z]{3}-\d{3}$/.test(payload.sku))
+        throw new Error("SKU debe tener formato AAA-999");
+      if (!Number.isFinite(payload.precio) || payload.precio <= 0)
+        throw new Error("Precio debe ser un número > 0");
 
       await apiCreateProduct(payload);
       setForm(empty);
-      onCreated?.(); // dispara recarga de la lista
+      onCreated?.();  // recarga lista
     } catch (err) {
       setError(err.message || "Error creando producto");
     } finally {
@@ -52,25 +46,18 @@ export default function ProductForm({ onCreated }) {
     <form onSubmit={onSubmit} className="card">
       <h3>Crear producto</h3>
       <div className="grid">
-        <label>
-          Nombre
+        <label>Nombre
           <input name="nombre" value={form.nombre} onChange={onChange} required />
         </label>
-        <label>
-          SKU
-          <input name="sku" value={form.sku} onChange={onChange} required />
+        <label>SKU
+          <input name="sku" value={form.sku} onChange={onChange} placeholder="AAA-999" required />
         </label>
-        <label>
-          Slug
+        <label>Slug
           <input name="slug" value={form.slug} onChange={onChange} required />
         </label>
-        <label>
-          Precio (centavos)
-          <input name="precio_cent" type="number" min="1" value={form.precio_cent} onChange={onChange} required />
-        </label>
-        <label>
-          Stock
-          <input name="stock" type="number" min="0" value={form.stock} onChange={onChange} required />
+        <label>Precio
+          <input name="precio" type="number" step="0.01" min="0.01"
+                 value={form.precio} onChange={onChange} required />
         </label>
         <label className="check">
           <input name="activo" type="checkbox" checked={form.activo} onChange={onChange} />
