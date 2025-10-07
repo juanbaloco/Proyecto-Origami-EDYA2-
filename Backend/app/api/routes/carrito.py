@@ -1,31 +1,39 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException,status
+from sqlalchemy.orm import Session
 from typing import List
+
+from app.core.dependencies import get_db, get_current_user
+from app.models.item_carrito import ItemCarrito
+from app.schemas.item_carrito import ItemCarritoCreate, ItemCarritoResponse
 
 router = APIRouter(prefix="/carrito", tags=["Carrito"])
 
-carritos = {} #{session_id: [{"producto_id": 1, "cantidad": 2}]}
+@router.post("/", response_model=List[ItemCarritoResponse])
+def ver_carrito(current_user= Depends(get_current_user), db: Session = Depends(get_db)):
+    items = db.query(ItemCarrito).filter(ItemCarrito.session_id == str(current_user.id)).all()
+    return items
 
-@router.get("/{session_id}")
-def ver_carrito(session_id: str):
-    return carritos.get(session_id, [])
 
-@router.post("/{session_id}")
-def agregar_carrito(session_id: str, item: dict):
-    if session_id not in carritos:
-        carritos[session_id] = []
-    carritos[session_id].append(item)
-    return {"msg": "agegado"}
+@router.post("/", response_model=ItemCarritoResponse)
+def agregar_al_carrito(item: ItemCarritoCreate, current_user= Depends(get_current_user), db: Session = Depends(get_db)):
+    nuevo_item = ItemCarrito(**item.dict(), session_id=str(current_user.id))
+    db.add(nuevo_item)
+    db.commit()
+    db.refresh(nuevo_item)
+    return nuevo_item
 
-@router.put("/{session_id}/{index}")
-def actualizar_item(session_id: str, index: int, item: dict):
-    if session_id in carritos and 0 <= index < len(carritos[session_id]):
-        carritos[session_id][index] = item
-        return {"msg": "Actualizado"}
-    raise HTTPException(status_code=404, detail="Item no encontrado")
+#@router.put("/{session_id}/{index}")
+#def actualizar_item(session_id: str, index: int, item: dict):
+ #   if session_id in carritos and 0 <= index < len(carritos[session_id]):
+  #      carritos[session_id][index] = item
+   #     return {"msg": "Actualizado"}
+    #raise HTTPException(status_code=404, detail="Item no encontrado")
 
-@router.delete("/{session_id}/{index}")
-def eliminar_item(session_id: str, index: int):
-    if session_id in carritos and 0 <= index < len(carritos[session_id]):
-        carritos[session_id].pop(index)
-        return {"msg": "Eliminado"}
-    raise HTTPException(status_code=404, detail="Item no encontrado")
+@router.delete("/{item_id}", status_code=204)
+def eliminar_item(item_id: int, current_user =Depends(get_current_user), db: Session = Depends(get_db)):
+    item = db.query(ItemCarrito).filter(ItemCarrito.id == item_id, ItemCarrito.session_id == str(current_user.id)).first()
+    if not item:
+     raise HTTPException(status_code=404, detail="Item no encontrado")
+    db.delete(item)
+    db.commit()
+    return

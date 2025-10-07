@@ -36,3 +36,6 @@ class ProductoOut(ProductoBase):
     sku: str
     slug: str
     categoria_slug: Optional[str] = None
+
+    class Config:
+        orm_mode = True

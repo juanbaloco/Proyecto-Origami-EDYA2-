@@ -11,6 +11,10 @@ class PedidoItem(BaseModel):
     producto_id: str
     cantidad: int    
 
+class PedidoItem(BaseModel):
+    producto_id: int
+    cantidad: int
+
 class PedidoBase(BaseModel):
     contacto: Contacto
     
@@ -21,6 +25,13 @@ class PedidoPersonalizado(PedidoBase):
     descripcion: str
     imagen_referencia: Optional[str] = None
 
-class Pedido(PedidoCreate):
+class PedidoUpdateEstado(BaseModel):
+    estado: str
+
+class PedidoResponse(PedidoCreate):
     id: int
     estado: str
+    
+
+    class Config:
+        orm_mode = True
