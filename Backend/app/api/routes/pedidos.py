@@ -4,7 +4,7 @@ from typing import List
 
 from app.core.dependencies import get_db, get_current_user, require_admin
 
-from app.models.pedido import Pedido
+from app.models.pedido import Pedido 
 from app.schemas.pedido import PedidoCreate, PedidoPersonalizado, PedidoResponse, PedidoUpdateEstado
 
 

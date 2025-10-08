@@ -1,12 +1,10 @@
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-
-from slowapi import _rate_limit_exceeded_handler
-from slowapi.errors import RateLimitExceeded
+from app.db import database
+database.Base.metadata.create_all(bind=database.engine)
 
 from app.core.cors import settings 
-from app.middleware.rate_limit import limiter 
 
 from app.api.routes import auth, categorias, productos, pedidos, carrito, fidelizacion
 
@@ -15,8 +13,6 @@ app = FastAPI(title="Origami 3D tienda API", description= "API REST para tienda 
 
 # CONFIGURACION DE LIMIADOR DE PETICIONES
 
-app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 #CONFIGURACION DE CORS MIDDLEWARE 
 

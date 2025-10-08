@@ -5,8 +5,14 @@ class CategoriaBase(BaseModel):
     nombre: str
 
 class CategoriaCreate(CategoriaBase):
-    pass
+    nombre: str
 
 class CategoriaUpdate(BaseModel):
     class Config:
-        orm_mode = True
+        from_attribute = True
+
+class CategoriaResponse(CategoriaBase):
+    id: int
+
+    class Config:
+        from_attribute = True

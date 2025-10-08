@@ -3,8 +3,8 @@ from sqlalchemy.orm import Session
 from typing import List
 
 from app.core.dependencies import get_db, get_current_user
-from app.models.item_carrito import ItemCarrito
-from app.schemas.item_carrito import ItemCarritoCreate, ItemCarritoResponse
+from app.models.carrito import ItemCarrito
+from app.schemas.carrito import ItemCarritoCreate, ItemCarritoResponse
 
 router = APIRouter(prefix="/carrito", tags=["Carrito"])
 

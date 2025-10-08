@@ -4,7 +4,7 @@ from typing import List
 
 from app.core.dependencies import get_db, get_current_user
 from app.schemas.fidelizacion import Fidelizacion, FidelizacionCreate, FidelizacionResponse
-from app.models.fidelizacion import Fidelizacion
+from app.models.fidelizacion import Fidelizacion 
 
 router = APIRouter(prefix="/fidelizacion", tags=["fidelizacion"])
 

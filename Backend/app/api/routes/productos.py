@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from typing import List
 
 from app.core.dependencies import get_db, require_admin
-from app.schemas.producto import Producto
+from app.schemas.producto import Producto 
 
 
 from sqlalchemy.orm import Session

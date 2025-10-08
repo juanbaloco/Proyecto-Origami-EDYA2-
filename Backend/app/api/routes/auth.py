@@ -6,8 +6,8 @@ from datetime import timedelta
 from app.core.dependencies import get_db, get_current_user
 from app.core.security import verify_password, create_access_token
 from app.models.usuario import Usuario
-from app.schemas.user import UserResponse
-from app.schemas.token import Token
+from app.schemas.usuario import UsuarioResponse 
+from app.schemas.token import Token 
 
 
 
@@ -34,6 +34,6 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
 
 # ver datos del usuario atenticado "me"
 
-@router.get("/me", response_model=UserResponse)
+@router.get("/me", response_model=UsuarioResponse)
 def me(current_user: Usuario = Depends(get_current_user)):
     return current_user 

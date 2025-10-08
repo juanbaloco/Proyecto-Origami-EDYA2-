@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List
 
 from app.core.dependencies import get_db, require_admin
-from app.models.categoria import Categoria
+from app.models.categoria import Categoria 
 from app.schemas.categoria import CategoriaCreate, CategoriaResponse
 
 router = APIRouter(prefix="/categorias", tags=["categorias"])

@@ -3,6 +3,12 @@ from typing import Optional
 
 SKU_PATTERN = r"^[A-Z]{3}-\d{3}$"  # AAA-999
 
+class Producto(BaseModel):
+    id: int
+    nombre: str
+    descripcion: str
+    precio: float
+
 class ProductoBase(BaseModel):
     nombre: str = Field(..., min_length=3, max_length=80)
     descripcion: Optional[str] = None
@@ -38,4 +44,4 @@ class ProductoOut(ProductoBase):
     categoria_slug: Optional[str] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True

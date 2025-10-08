@@ -1,6 +1,15 @@
 from pydantic import BaseModel, EmailStr
 from typing import List, Optional
 
+
+class Fidelizacion(BaseModel):
+    id: int
+    correo : EmailStr
+    nombre_completo : str
+    fecha_nacimiento :str
+    redes: Optional[List[str]] = None
+    direccion: Optional[str] = None
+
 class FidelizacionBase(BaseModel):
     correo : EmailStr
     nombre_completo : str
@@ -24,4 +33,4 @@ class FidelizacionResponse(FidelizacionBase):
     proximo_regalo: Optional[str] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
