@@ -1,37 +1,48 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import LoginPage from './pages/LoginPage';
-import ProductListPage from './pages/ProductListPage'; // Tu ProductList envuelto en una página
-import ProductCreatePage from './pages/ProductCreatePage'; // Componente de Creación
-import ProtectedRoute from './components/ProtectedRoute';
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { createContext, useEffect, useState } from "react";
+import { apiMe, clearToken, getToken } from "./api";
+import ProtectedRoute from "./components/ProtectedRoute";
+import AdminRoute from "./components/AdminRoute";
+import LoginPage from "./pages/LoginPage";
+import RegisterPage from "./pages/RegisterPage";
+import ProductListPage from "./pages/ProductListPage";
+import ProductCreatePage from "./pages/ProductCreatePage";
 
-// Nota: Puedes renombrar ProductList.jsx a ProductListPage.jsx o envolverlo.
+export const AuthContext = createContext(null);
 
 export default function App() {
-    return (
-        <BrowserRouter>
-            <main>
-                <Routes>
-                    {/* Rutas Públicas */}
-                    <Route path="/login" element={<LoginPage />} />
-                    <Route path="/registro" element={<div>Página de Registro (similar a Login)</div>} />
+const [user, setUser] = useState(null); // { id, username, email, is_admin }
+const [ready, setReady] = useState(false);
 
-                    {/* Rutas Protegidas (Requieren Token) */}
-                    <Route element={<ProtectedRoute />}>
-                        {/* 1. Entidad Principal (Origami/Producto) */}
-                        <Route path="/productos" element={<ProductListPage />} /> {/* Listado */}
-                        <Route path="/productos/new" element={<ProductCreatePage />} /> {/* Creación */}
-                        <Route path="/productos/:id" element={<div>Detalle/Edición</div>} /> {/* Detalle/Edición */}
-                        
-                        {/* 2. Nuevas Entidades (Pedido y Fidelización) */}
-                        <Route path="/pedidos" element={<div>Listado de Pedidos</div>} />
-                        <Route path="/pedidos/:id" element={<div>Detalle de Pedido</div>} />
-                        <Route path="/fidelizacion/new" element={<div>Crear Cliente de Fidelización</div>} />
-                    </Route>
+useEffect(() => {
+const t = getToken();
+if (!t) { setReady(true); return; }
+apiMe()
+.then(setUser)
+.catch(() => { clearToken(); setUser(null); })
+.finally(() => setReady(true));
+}, []);
 
-                    {/* Redirigir la raíz */}
-                    <Route path="/" element={<Navigate to="/productos" />} />
-                </Routes>
-            </main>
-        </BrowserRouter>
-    );
+if (!ready) return null;
+
+return (
+<AuthContext.Provider value={{ user, setUser }}>
+<BrowserRouter>
+<main>
+<Routes>
+<Route path="/login" element={<LoginPage />} />
+<Route path="/registro" element={<RegisterPage />} />
+        <Route element={<ProtectedRoute />}>
+          <Route path="/productos" element={<ProductListPage />} />
+          <Route element={<AdminRoute />}>
+            <Route path="/productos/new" element={<ProductCreatePage />} />
+          </Route>
+        </Route>
+
+        <Route path="/" element={<Navigate to="/productos" />} />
+      </Routes>
+    </main>
+  </BrowserRouter>
+</AuthContext.Provider>
+);
 }

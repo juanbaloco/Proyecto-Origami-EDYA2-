@@ -3,11 +3,7 @@ from typing import Optional
 
 SKU_PATTERN = r"^[A-Z]{3}-\d{3}$"  # AAA-999
 
-class Producto(BaseModel):
-    id: int
-    nombre: str
-    descripcion: str
-    precio: float
+
 
 class ProductoBase(BaseModel):
     nombre: str = Field(..., min_length=3, max_length=80)
@@ -16,7 +12,7 @@ class ProductoBase(BaseModel):
     color: Optional[str] = None
     tamano: Optional[str] = None
     material: Optional[str] = None
-    imagen_url: Optional[HttpUrl] = None
+    imagen_url: Optional[str] = None
     activo: bool = True
 
 class ProductoCreate(ProductoBase):
@@ -31,14 +27,14 @@ class ProductoUpdate(BaseModel):
     color: Optional[str] = None
     tamano: Optional[str] = None
     material: Optional[str] = None
-    imagen_url: Optional[HttpUrl] = None
+    imagen_url: Optional[str] = None
     activo: Optional[bool] = None
     sku: Optional[str] = Field(None, pattern=SKU_PATTERN)
     slug: Optional[str] = Field(None, min_length=3, max_length=60)
     categoria_slug: Optional[str] = Field(default=None, description="3d|filigrama|pliegues|ensambles")
 
 class ProductoOut(ProductoBase):
-    id: str
+    id: int
     sku: str
     slug: str
     categoria_slug: Optional[str] = None

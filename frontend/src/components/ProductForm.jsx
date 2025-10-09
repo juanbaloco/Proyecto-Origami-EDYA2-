@@ -1,73 +1,92 @@
 import { useState } from "react";
-import { apiCreateProduct } from "../api";
-
-const empty = { nombre: "", sku: "", slug: "", precio: "", activo: true };
+import { apiCreateProduct, clearToken } from "../api";
+import { useNavigate } from "react-router-dom";
 
 export default function ProductForm({ onCreated }) {
-  const [form, setForm] = useState(empty);
-  const [sending, setSending] = useState(false);
-  const [error, setError] = useState("");
+const navigate = useNavigate();
+const [error, setError] = useState("");
+const [sending, setSending] = useState(false);
 
-  function onChange(e) {
-    const { name, value, type, checked } = e.target;
-    setForm(f => ({ ...f, [name]: type === "checkbox" ? checked : value }));
-  }
+const [form, setForm] = useState({
+nombre: "",
+descripcion: "",
+precio: 0,
+color: "",
+tamano: "",
+material: "",
+imagen_url: "",
+activo: true,
+sku: "",
+slug: "",
+categoria_slug: ""
+});
 
-  async function onSubmit(e) {
-    e.preventDefault();
-    setSending(true); setError("");
-    try {
-      const payload = {
-        nombre: String(form.nombre).trim(),
-        sku: String(form.sku).trim(),     // debe ser AAA-999
-        slug: String(form.slug).trim(),
-        precio: Number(form.precio),      // <-- AHORA 'precio' (float)
-        activo: !!form.activo,
-      };
+function onChange(e) {
+const { name, value, type, checked } = e.target;
+setForm(f => ({ ...f, [name]: type === "checkbox" ? checked : value }));
+}
 
-      if (!payload.nombre || !payload.sku || !payload.slug)
-        throw new Error("Nombre, SKU y Slug son obligatorios");
-      if (!/^[A-Z]{3}-\d{3}$/.test(payload.sku))
-        throw new Error("SKU debe tener formato AAA-999");
-      if (!Number.isFinite(payload.precio) || payload.precio <= 0)
-        throw new Error("Precio debe ser un número > 0");
+async function onSubmit(e) {
+e.preventDefault();
+setError("");
+setSending(true);
+try {
+await apiCreateProduct({
+...form,
+precio: Number(form.precio)
+});
+onCreated?.();
+navigate("/productos");
+} catch (e) {
+if (/401|403/.test(String(e.message))) {
+clearToken();
+navigate("/login");
+} else {
+setError(e.message || "Error al crear producto");
+}
+} finally {
+setSending(false);
+}
+}
 
-      await apiCreateProduct(payload);
-      setForm(empty);
-      onCreated?.();  // recarga lista
-    } catch (err) {
-      setError(err.message || "Error creando producto");
-    } finally {
-      setSending(false);
-    }
-  }
+return (
+<form className="card" onSubmit={onSubmit}>
+<label>Nombre
+<input name="nombre" value={form.nombre} onChange={onChange} required minLength={3} />
+</label>
+<label>Descripción
+<textarea name="descripcion" value={form.descripcion} onChange={onChange} />
+</label>
+<label>Precio
+<input name="precio" type="number" step="0.01" min="0.01" value={form.precio} onChange={onChange} required />
+</label>
+<label>Color
+<input name="color" value={form.color} onChange={onChange} />
+</label>
+<label>Tamaño
+<input name="tamano" value={form.tamano} onChange={onChange} />
+</label>
+<label>Material
+<input name="material" value={form.material} onChange={onChange} />
+</label>
+<label>Imagen URL
+<input name="imagen_url" value={form.imagen_url} onChange={onChange} />
+</label>
+<label>Activo
+<input name="activo" type="checkbox" checked={form.activo} onChange={onChange} />
+</label>
+<label>SKU (AAA-999)
+<input name="sku" value={form.sku} onChange={onChange} required />
+</label>
+<label>Slug
+<input name="slug" value={form.slug} onChange={onChange} required />
+</label>
+<label>Categoría (3d|filigrama|pliegues|ensambles)
+<input name="categoria_slug" value={form.categoria_slug} onChange={onChange} />
+</label>
 
-  return (
-    <form onSubmit={onSubmit} className="card">
-      <h3>Crear producto</h3>
-      <div className="grid">
-        <label>Nombre
-          <input name="nombre" value={form.nombre} onChange={onChange} required />
-        </label>
-        <label>SKU
-          <input name="sku" value={form.sku} onChange={onChange} placeholder="AAA-999" required />
-        </label>
-        <label>Slug
-          <input name="slug" value={form.slug} onChange={onChange} required />
-        </label>
-        <label>Precio
-          <input name="precio" type="number" step="0.01" min="0.01"
-                 value={form.precio} onChange={onChange} required />
-        </label>
-        <label className="check">
-          <input name="activo" type="checkbox" checked={form.activo} onChange={onChange} />
-          Activo
-        </label>
-      </div>
-      <div className="row">
-        <button disabled={sending}>{sending ? "Creando…" : "Crear"}</button>
-        {error && <span className="error">{error}</span>}
-      </div>
-    </form>
-  );
+  {error && <div className="error">{error}</div>}
+  <button type="submit" disabled={sending}>{sending ? "Creando..." : "Crear"}</button>
+</form>
+);
 }
