@@ -227,6 +227,10 @@ python -m pip install fastapi uvicorn sqlalchemy pydantic
 
 python -m pip install python-jose
 
+pip install python-jose[cryptography]==3.3.0
+
+pip install --upgrade "passlib==1.7.4" "python-jose[cryptography]==3.3.0"
+
 python -m pip install passlib[bcrypt]
 
 .\.venv\Scripts\python.exe -m pip install python-multipart
