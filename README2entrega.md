@@ -6,13 +6,13 @@ Se implementaron modelos ORM completos, conexión a FastAPI mediante dependencia
 
 Cambios generales:
 
+<img width="505" height="329" alt="image" src="https://github.com/user-attachments/assets/e2985d8f-ab95-4e62-864c-d98da9362a5c" />
 
-![alt text](image.png)
 
 Cambios en endpoints:
 
+<img width="494" height="304" alt="image" src="https://github.com/user-attachments/assets/941d87eb-6829-4d90-8620-80237e31bf68" />
 
-![alt text](image-1.png)
 
 
 BASE DE DATOS Y CREACIÓN DE MODELS
@@ -32,35 +32,35 @@ Incluir pruebas unitarias automatizadas para endpoints críticos.
 Estructura de archivos creados
 Backend/
 ├── app/
-│   ├── db/                          # Configuración de base de datos
-│   │   ├── __init__.py             # Exporta componentes principales
-│   │   └── database.py             # Conexión y sesión de BD
-│   │
-│   └── models/                      # Modelos SQLAlchemy (ORM)
-│       ├── __init__.py             # Exporta todos los modelos
-│       ├── usuario.py              # Modelo de usuarios
-│       ├── categoria.py            # Modelo de categorías
-│       ├── producto.py             # Modelo de productos
-│       ├── carrito.py              # Modelos de carrito de compras
-│       ├── pedido.py               # Modelos de pedidos
-│       └── fidelizacion.py         # Modelo de fidelización
-│
-└── bd/
-    └── BDproyectoorigami.db        # Base de datos SQLite
-Estructura de archivos modificados:
+│   ├── db/                          # Configuración de base de datos 
+│   │   ├── __init__.py             # Exporta componentes principales 
+│   │   └── database.py             # Conexión y sesión de BD 
+│   │ 
+│   └── models/                      # Modelos SQLAlchemy (ORM) 
+│       ├── __init__.py             # Exporta todos los modelos 
+│       ├── usuario.py              # Modelo de usuarios 
+│       ├── categoria.py            # Modelo de categorías 
+│       ├── producto.py             # Modelo de productos 
+│       ├── carrito.py              # Modelos de carrito de compras 
+│       ├── pedido.py               # Modelos de pedidos 
+│       └── fidelizacion.py         # Modelo de fidelización 
+│ 
+└── bd/ 
+    └── BDproyectoorigami.db        # Base de datos SQLite 
+Estructura de archivos modificados: 
 
-Backend/
-├──app/
-│   ├──Schemas/
-│       ├──__init__    #exporta todos los esquemas
-│       ├── auth.py  # nueva entidad encargada de la autenticación de usuario
-│       ├── carrito.py	# entidad donde se encuentra la lista y paginación de productos agregados
-│       ├── categoria.py   #Nueva entidad donde se representan las categorías de origami
-│       ├── fidelizacion.py #ajustes de endpoint para que los datos persistan en base de datos
-│       ├── pedido.py  #ajustes de endpoint para que los datos persistan en base de datos
-│       ├── producto.py #ajustes de endpoint para que los datos persistan en base de datos
-│       ├── token.py #token para el inicio de sección en usuario 
-│       └── usuario.py #nueva entidad encargada de los datos del usuario y administrador
+Backend/ 
+├──app/ 
+│   ├──Schemas/ 
+│       ├──__init__    #exporta todos los esquemas 
+│       ├── auth.py  # nueva entidad encargada de la autenticación de usuario 
+│       ├── carrito.py	# entidad donde se encuentra la lista y paginación de productos agregados 
+│       ├── categoria.py   #Nueva entidad donde se representan las categorías de origami 
+│       ├── fidelizacion.py #ajustes de endpoint para que los datos persistan en base de datos 
+│       ├── pedido.py  #ajustes de endpoint para que los datos persistan en base de datos 
+│       ├── producto.py #ajustes de endpoint para que los datos persistan en base de datos 
+│       ├── token.py #token para el inicio de sección en usuario  
+│       └── usuario.py #nueva entidad encargada de los datos del usuario y administrador 
 │
 │
 Configuración de Conexión (app/db/database.py)
