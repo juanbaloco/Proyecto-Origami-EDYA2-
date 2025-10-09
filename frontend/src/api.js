@@ -29,3 +29,27 @@ function formatDetail(detail) {
   if (Array.isArray(detail)) return detail.map(d => d?.msg || JSON.stringify(d)).join(" | ");
   return JSON.stringify(detail);
 }
+// ... (código existente de api.js)
+
+// --- Funciones de autenticación ---
+
+const TOKEN_KEY = "auth_token";
+
+export function getToken() {
+  return localStorage.getItem(TOKEN_KEY);
+}
+
+export function setToken(token) {
+  if (token) {
+    localStorage.setItem(TOKEN_KEY, token);
+  } else {
+    clearToken();
+  }
+}
+
+export function clearToken() {
+  localStorage.removeItem(TOKEN_KEY);
+}
+
+// Ahora, tu archivo ProtectedRoute.jsx podrá importar y usar getToken
+// ...
