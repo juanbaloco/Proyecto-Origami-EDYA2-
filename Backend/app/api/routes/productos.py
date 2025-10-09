@@ -54,12 +54,25 @@ def create_endpoint(payload: ProductoCreate, db: Session = Depends(get_db)):
 
 
 @router.patch("/{product_id}", response_model=ProductoOut, dependencies=[Depends(require_admin)])
-def update_endpoint(product_id: str, payload: ProductoUpdate, db: Session = Depends(get_db)):
+def update_endpoint(product_id: int, payload: ProductoUpdate, db: Session = Depends(get_db)):
     product = db.query(ProductoModel).filter(ProductoModel.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Producto no encontrado")
-    for key, value in payload.dict(exclude_unset=True).items():
-        setattr(product, key, value)
+    data = payload.dict(exclude_unset=True)
+    if "slug" in data:
+        exists = db.query(ProductoModel).filter(
+        ProductoModel.slug == data["slug"], ProductoModel.id != product_id
+        ).first()
+    if exists:
+        raise HTTPException(status_code=409, detail="Slug ya existe")
+    if "sku" in data:
+        exists = db.query(ProductoModel).filter(
+        ProductoModel.sku == data["sku"], ProductoModel.id != product_id
+        ).first()
+    if exists:
+        raise HTTPException(status_code=409, detail="SKU ya existe")
+    for k, v in data.items():
+        setattr(product, k, v)
         db.commit()
         db.refresh(product)
     return product
