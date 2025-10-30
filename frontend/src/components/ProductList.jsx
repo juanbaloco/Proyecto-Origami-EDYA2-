@@ -8,9 +8,8 @@ export default function ProductList() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const timer = useRef(null);
-
-  // Ref para siempre tener el valor más reciente de q dentro de listeners
   const qRef = useRef(q);
+  
   useEffect(() => { qRef.current = q; }, [q]);
 
   async function fetchNow(search) {
@@ -28,51 +27,36 @@ export default function ProductList() {
     }
   }
 
-  // Carga inicial
   useEffect(() => { fetchNow(""); }, []);
-
-  // Debounce 300 ms
+  
   useEffect(() => {
     clearTimeout(timer.current);
     timer.current = setTimeout(() => { fetchNow(q); }, 300);
     return () => clearTimeout(timer.current);
   }, [q]);
 
-  // Escuchar evento global para recargar (al crear)
-  useEffect(() => {
-    const onReload = () => fetchNow(qRef.current);
-    window.addEventListener("reload-products", onReload);
-    return () => window.removeEventListener("reload-products", onReload);
-  }, []); // se registra una sola vez
-
   return (
-    <section className="card">
-      <div className="row">
-        <input
-          placeholder="Buscar por nombre o SKU…"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-        />
-        <span className="muted">{loading ? "Cargando…" : `${total} resultados`}</span>
-      </div>
-
-      {error && <div className="error">{error}</div>}
-
-      <ul className="list">
+    <div>
+      <input
+        type="search"
+        placeholder="Buscar productos..."
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+      />
+      {loading && <p>Cargando...</p>}
+      {error && <p style={{color: "red"}}>{error}</p>}
+      {!loading && !error && data.length === 0 && <p>No hay productos.</p>}
+      <div>
         {data.map((p) => (
-          <li key={p.id} className="item">
-            <div className="title">{p.nombre}</div>
-            <div className="sub">
-  SKU: {p.sku} · Slug: {p.slug} · Precio: ${Number(p.precio).toFixed(2)} {p.activo ? "· Activo" : "· Inactivo"}
-</div>
-
-          </li>
+          <article key={p.id} style={{border: "1px solid #ccc", padding: "1rem", marginBottom: "1rem"}}>
+            <h3>{p.nombre}</h3>
+            <p>{p.descripcion}</p>
+            <p>Precio: ${Number(p.precio).toFixed(2)}</p>
+            {p.stock !== undefined && <p>Stock: {p.stock}</p>}
+          </article>
         ))}
-      </ul>
-
-      {!loading && !error && data.length === 0 && (
-        <div className="muted">Sin resultados</div>
-      )}
-    </section>
+      </div>
+      <p>Total de productos: {total}</p>
+    </div>
   );
 }

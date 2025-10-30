@@ -1,87 +1,64 @@
-# Backend/app/api/routes/productos.py
-
+from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-
-from typing import List, Optional 
+from sqlalchemy.orm import Session
+from sqlalchemy import or_
 
 from app.core.dependencies import get_db, require_admin
-
-from sqlalchemy.orm import Session
 from app.models.producto import Producto as ProductoModel
-from app.schemas.producto import ProductoCreate, ProductoUpdate, ProductoOut 
+from app.schemas.producto import ProductoCreate, ProductoUpdate, ProductoOut
 
-# ⬇️⬇️⬇️  ESTO ES CLAVE
-router = APIRouter(prefix="/productos", tags=["productos"])
+router = APIRouter(prefix="/api/productos", tags=["productos"])
 
-# LISTAR  -> /api/productos  y  /api/productos/
-
-
+# IMPORTANTE: usa "" para aceptar ambas /api/productos y /api/productos/
 @router.get("", response_model=List[ProductoOut])
-def list_endpoint(
+@router.get("/", response_model=List[ProductoOut])
+def list_productos(
     q: Optional[str] = Query(None),
     categoria: Optional[str] = Query(None, description="3d|filigrama|pliegues|ensambles"),
     offset: int = Query(0, ge=0),
     limit: int = Query(10, ge=1, le=50),
     db: Session = Depends(get_db),
 ):
-    if categoria and categoria.lower() not in {"3d", "filigrama", "pliegues", "ensambles"}:
-        raise HTTPException(status_code=422, detail="categoria no válida")
-    query= db.query(ProductoModel).filter(ProductoModel.activo == True)
+    query = db.query(ProductoModel).filter(ProductoModel.activo == True)
     if q:
-        pattern = f"%{q}%"
-        query = query.filter(
-            (ProductoModel.nombre.ilike(pattern)) | (ProductoModel.descripcion.ilike(pattern))
-    )
-
+        p = f"%{q}%"
+        query = query.filter(or_(ProductoModel.nombre.ilike(p), ProductoModel.descripcion.ilike(p)))
     if categoria:
         query = query.filter(ProductoModel.categoria_slug == categoria.lower())
-
     items = query.offset(offset).limit(limit).all()
     return items
 
-
-
-# CREAR  -> /api/productos  y  /api/productos/
-@router.post("", response_model=ProductoOut, status_code=201, dependencies=[Depends(require_admin)])
-def create_endpoint(payload: ProductoCreate, db: Session = Depends(get_db)):
-  product = ProductoModel(**payload.dict())
-  db.add(product)
-  db.commit()
-  db.refresh(product)
-  return product
-
-# ACTUALIZAR  -> /api/productos/{product_id}
-
-
-@router.patch("/{product_id}", response_model=ProductoOut, dependencies=[Depends(require_admin)])
-def update_endpoint(product_id: int, payload: ProductoUpdate, db: Session = Depends(get_db)):
-    product = db.query(ProductoModel).filter(ProductoModel.id == product_id).first()
-    if not product:
-        raise HTTPException(status_code=404, detail="Producto no encontrado")
-    data = payload.dict(exclude_unset=True)
-    if "slug" in data:
-        exists = db.query(ProductoModel).filter(
-        ProductoModel.slug == data["slug"], ProductoModel.id != product_id
-        ).first()
-    if exists:
-        raise HTTPException(status_code=409, detail="Slug ya existe")
-    if "sku" in data:
-        exists = db.query(ProductoModel).filter(
-        ProductoModel.sku == data["sku"], ProductoModel.id != product_id
-        ).first()
-    if exists:
-        raise HTTPException(status_code=409, detail="SKU ya existe")
-    for k, v in data.items():
-        setattr(product, k, v)
-        db.commit()
-        db.refresh(product)
-    return product
-
-@router.delete("/{product_id}", status_code=204, dependencies=[Depends(require_admin)])
-def delete_endpoint(product_id: str, db: Session = Depends(get_db)):
-    product = db.query(ProductoModel).filter(ProductoModel.id == product_id).first()
-    if not product:
-        raise HTTPException(status_code=404, detail="Producto no encontrado")
-    product.activo = False
+@router.post("", response_model=ProductoOut, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_admin)])
+@router.post("/", response_model=ProductoOut, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_admin)])
+def create_producto(payload: ProductoCreate, db: Session = Depends(get_db)):
+    obj = ProductoModel(**payload.model_dump())
+    db.add(obj)
     db.commit()
-    return
+    db.refresh(obj)
+    return obj
+
+@router.get("/{producto_id}", response_model=ProductoOut)
+def get_producto(producto_id: int, db: Session = Depends(get_db)):
+    obj = db.query(ProductoModel).filter(ProductoModel.id == producto_id).first()
+    if not obj:
+        raise HTTPException(status_code=404, detail="Producto no encontrado")
+    return obj
+
+@router.put("/{producto_id}", response_model=ProductoOut, dependencies=[Depends(require_admin)])
+def update_producto(producto_id: int, payload: ProductoUpdate, db: Session = Depends(get_db)):
+    obj = db.query(ProductoModel).filter(ProductoModel.id == producto_id).first()
+    if not obj:
+        raise HTTPException(status_code=404, detail="Producto no encontrado")
+    for k, v in payload.model_dump(exclude_unset=True).items():
+        setattr(obj, k, v)
+    db.commit()
+    db.refresh(obj)
+    return obj
+
+@router.delete("/{producto_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_admin)])
+def delete_producto(producto_id: int, db: Session = Depends(get_db)):
+    obj = db.query(ProductoModel).filter(ProductoModel.id == producto_id).first()
+    if not obj:
+        raise HTTPException(status_code=404, detail="Producto no encontrado")
+    db.delete(obj)
+    db.commit()

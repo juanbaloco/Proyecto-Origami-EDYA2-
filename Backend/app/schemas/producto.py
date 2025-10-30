@@ -1,9 +1,5 @@
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field
 from typing import Optional
-
-SKU_PATTERN = r"^[A-Z]{3}-\d{3}$"  # AAA-999
-
-
 
 class ProductoBase(BaseModel):
     nombre: str = Field(..., min_length=3, max_length=80)
@@ -14,11 +10,11 @@ class ProductoBase(BaseModel):
     material: Optional[str] = None
     imagen_url: Optional[str] = None
     activo: bool = True
+    stock: int = Field(ge=0, default=0)
+    categoria_slug: Optional[str] = Field(default=None, description="3d|filigrama|pliegues|ensambles")
 
 class ProductoCreate(ProductoBase):
-    sku: str = Field(..., pattern=SKU_PATTERN)
-    slug: str = Field(..., min_length=3, max_length=60)
-    categoria_slug: Optional[str] = Field(default=None, description="3d|filigrama|pliegues|ensambles")
+    pass
 
 class ProductoUpdate(BaseModel):
     nombre: Optional[str] = Field(None, min_length=3, max_length=80)
@@ -29,15 +25,11 @@ class ProductoUpdate(BaseModel):
     material: Optional[str] = None
     imagen_url: Optional[str] = None
     activo: Optional[bool] = None
-    sku: Optional[str] = Field(None, pattern=SKU_PATTERN)
-    slug: Optional[str] = Field(None, min_length=3, max_length=60)
+    stock: Optional[int] = Field(default=None, ge=0)
     categoria_slug: Optional[str] = Field(default=None, description="3d|filigrama|pliegues|ensambles")
 
 class ProductoOut(ProductoBase):
     id: int
-    sku: str
-    slug: str
-    categoria_slug: Optional[str] = None
-
+    
     class Config:
         from_attributes = True

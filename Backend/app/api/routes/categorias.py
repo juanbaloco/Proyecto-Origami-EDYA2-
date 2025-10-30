@@ -12,13 +12,15 @@ router = APIRouter(prefix="/categorias", tags=["categorias"])
 def listar_categorias(db: Session = Depends(get_db)):
     return db.query(Categoria).all()
 
-@router.post("/", response_model=CategoriaResponse,dependencies=[Depends(require_admin)])
+@router.post("/", response_model=CategoriaResponse, status_code=status.HTTP_201_CREATED,
+             dependencies=[Depends(require_admin)])
 def crear_categoria(data: CategoriaCreate, db: Session = Depends(get_db)):
-    categoria_existente = db.query(Categoria).filter(Categoria.slug == data.slug).first()
-    if categoria_existente:
+    existente = db.query(Categoria).filter(Categoria.slug == data.slug).first()
+    if existente:
         raise HTTPException(status_code=409, detail="La categoría ya existe")
-    nueva_categoria = Categoria(**Categoria.dict())
-    db.add(nueva_categoria)
+    nueva = Categoria(**data.dict())
+    db.add(nueva)
     db.commit()
-    db.refresh(nueva_categoria)
-    return nueva_categoria
+    db.refresh(nueva)
+    return nueva
+

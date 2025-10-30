@@ -49,6 +49,9 @@ class UsuarioResponse(UsuarioBase):
             }
         }
 
+# ALIAS para compatibilidad con imports existentes
+UsuarioOut = UsuarioResponse
+
 # Para el perfil completo del usuario (si necesitas más detalles después)
 class UsuarioProfile(UsuarioResponse):
     """Schema extendido para perfil de usuario con información adicional"""

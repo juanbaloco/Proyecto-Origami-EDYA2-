@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, ConfigDict
 from typing import List, Optional
 
 class Contacto(BaseModel):
@@ -7,24 +7,28 @@ class Contacto(BaseModel):
     telefono: Optional[str] = None
 
 class PedidoItem(BaseModel):
-    producto_id: str
+    producto_id: int
     cantidad: int
 
-class PedidoBase(BaseModel):
+class PedidoCreate(BaseModel):
     contacto: Contacto
-
-class PedidoCreate(PedidoBase):
     items: List[PedidoItem]
 
-class PedidoPersonalizado(PedidoBase):
+class PedidoPersonalizado(BaseModel):
+    contacto: Contacto
     descripcion: str
     imagen_referencia: Optional[str] = None
 
 class PedidoUpdateEstado(BaseModel):
     estado: str
 
-class PedidoResponse(PedidoCreate):
-    id: int
+class PedidoResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    
+    id: str
     estado: str
-    class Config:
-        from_attributes = True
+    contacto: Contacto
+    items: List[PedidoItem]
+    tipo: str
+    descripcion: Optional[str] = None
+    imagen_referencia: Optional[str] = None
