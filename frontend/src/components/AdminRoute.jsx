@@ -1,11 +1,16 @@
 // src/components/AdminRoute.jsx
+
 import { useContext } from "react";
-import { Navigate, Outlet } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 import { getToken } from "../api";
 import { AuthContext } from "../App";
-export default function AdminRoute() {
+
+export default function AdminRoute({ children }) {
   const { user } = useContext(AuthContext);
+
   if (!getToken()) return <Navigate to="/login" replace />;
-  if (!user?.is_admin) return <Navigate to="/productos" replace />;
-  return <Outlet />;
+
+  if (!user?.is_admin) return <Navigate to="/" replace />;
+
+  return children;
 }

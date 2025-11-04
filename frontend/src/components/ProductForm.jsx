@@ -1,9 +1,7 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { apiCreateProduct, clearToken } from "../api";
 
-export default function ProductForm({ onCreated }) {
-  const navigate = useNavigate();
+export default function ProductForm({ onCreated, onCancel }) {
   const [error, setError] = useState("");
   const [sending, setSending] = useState(false);
   const [form, setForm] = useState({
@@ -13,7 +11,7 @@ export default function ProductForm({ onCreated }) {
 
   function onChange(e) {
     const { name, value, type, checked } = e.target;
-    setForm((f) => ({ ...f, [name]: type === "checkbox" ? checked : value }));
+    setForm(f => ({ ...f, [name]: type === "checkbox" ? checked : value }));
   }
 
   async function onSubmit(e) {
@@ -27,13 +25,12 @@ export default function ProductForm({ onCreated }) {
         stock: Number(form.stock ?? 0),
         categoria_slug: form.categoria_slug || null,
       });
-      onCreated?.();
-      navigate("/productos");
+      onCreated?.(); // Llamar al callback para actualizar y cerrar modal
     } catch (err) {
       const msg = err?.message || "Error al crear producto";
       if (/401|403/.test(String(msg))) {
         clearToken();
-        navigate("/login");
+        // no llamar a navigate, el padre debe manejar eso si es necesario
       } else {
         setError(msg);
       }
@@ -63,7 +60,8 @@ export default function ProductForm({ onCreated }) {
       </label>
       <label><input type="checkbox" name="activo" checked={form.activo} onChange={onChange} /> Activo</label>
       <button type="submit" disabled={sending}>{sending ? "Creando..." : "Crear"}</button>
-      {error && <p style={{color: "red"}}>{error}</p>}
+      <button type="button" onClick={onCancel} disabled={sending} style={{ marginLeft: "10px" }}>Cancelar</button>
+      {error && <p style={{ color: "red" }}>{error}</p>}
     </form>
   );
 }

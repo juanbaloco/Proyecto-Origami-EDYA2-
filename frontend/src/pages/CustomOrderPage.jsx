@@ -1,209 +1,200 @@
-import { useState, useContext } from "react";
-import { useNavigate } from "react-router-dom";
-import { AuthContext } from "../App";
+import { useState } from "react";
+import { apiCreateCustomOrder } from "../api";
 
 export default function CustomOrderPage() {
-  const { user } = useContext(AuthContext);
-  const navigate = useNavigate();
-  
-  const [form, setForm] = useState({
-    descripcion: "",
-    imagen_referencia: "",
-    nombre: "",
-    telefono: ""
-  });
-  
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [descripcion, setDescripcion] = useState("");
+  const [img, setImg] = useState("");
+  const [contacto, setContacto] = useState({ nombre: "", email: "", telefono: "" });
+  const [msg, setMsg] = useState("");
+  const [err, setErr] = useState("");
+  const [sending, setSending] = useState(false);
 
-  async function handleSubmit(e) {
-    e.preventDefault();
-    setError("");
-    
-    // Validaciones
-    if (!form.descripcion.trim()) {
-      setError("Por favor describe tu pedido personalizado");
-      return;
-    }
-    
-    if (!form.nombre.trim()) {
-      setError("Por favor ingresa tu nombre completo");
+  function onFile(e) {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    const fr = new FileReader();
+    fr.onload = () => setImg(String(fr.result));
+    fr.readAsDataURL(f);
+  }
+
+  async function submit() {
+    setErr("");
+    setMsg("");
+
+    if (!descripcion.trim()) {
+      setErr("La descripción es obligatoria");
       return;
     }
 
-    setLoading(true);
-    
+    if (!contacto.nombre.trim() || !contacto.email.trim() || !contacto.telefono.trim()) {
+      setErr("Todos los datos de contacto son obligatorios");
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(contacto.email)) {
+      setErr("El correo electrónico no es válido");
+      return;
+    }
+
+    setSending(true);
     try {
-      const token = localStorage.getItem("auth_token");
-      const res = await fetch("http://127.0.0.1:8000/api/pedidos/personalizado", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          contacto: {
-            nombre: form.nombre,
-            email: user?.email || "",
-            telefono: form.telefono || null
-          },
-          descripcion: form.descripcion,
-          imagen_referencia: form.imagen_referencia || null
-        })
+      await apiCreateCustomOrder({
+        descripcion: descripcion.trim(),
+        imagen_referencia: img || null,
+        contacto: {
+          nombre: contacto.nombre.trim(),
+          email: contacto.email.trim(),
+          telefono: contacto.telefono.trim()
+        }
       });
 
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.detail || `Error ${res.status}`);
-      }
-
-      const data = await res.json();
-      alert(`✅ Pedido personalizado creado exitosamente\nID: ${data.id}`);
-      setForm({ descripcion: "", imagen_referencia: "", nombre: "", telefono: "" });
-      navigate("/mis-pedidos");
-      
-    } catch (err) {
-      setError(err.message);
+      setMsg("✅ Pedido personalizado creado exitosamente, pronto nos contactaremos contigo.");
+      setDescripcion("");
+      setImg("");
+      setContacto({ nombre: "", email: "", telefono: "" });
+    } catch (error) {
+      console.error("Error creando pedido personalizado:", error);
+      setErr(error.message || "Error al crear el pedido personalizado");
     } finally {
-      setLoading(false);
+      setSending(false);
     }
   }
 
   return (
-    <div style={{ maxWidth: "600px", margin: "0 auto", padding: "2rem" }}>
-      <h1>Pedido Personalizado</h1>
-      <p style={{ color: "#666", marginBottom: "2rem" }}>
+    <div style={{ padding: "2rem", maxWidth: "600px", margin: "0 auto" }}>
+      <h1 style={{ marginBottom: "1rem", color: "#667eea" }}>✨ Pedido Personalizado</h1>
+      <p style={{ marginBottom: "2rem", color: "#666" }}>
         Describe tu diseño personalizado de origami 3D y nos pondremos en contacto contigo.
       </p>
 
-      <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-        <div>
-          <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500" }}>
-            Descripción del diseño *
-          </label>
-          <textarea
-            value={form.descripcion}
-            onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
-            placeholder="Ejemplo: Quiero una grulla de origami 3D de 30cm de altura en color azul y blanco..."
-            rows="6"
-            required
-            style={{
-              width: "100%",
-              padding: "0.75rem",
-              border: "1px solid #ddd",
-              borderRadius: "8px",
-              fontSize: "1rem",
-              fontFamily: "inherit"
-            }}
-          />
+      {msg && (
+        <div style={{ padding: "1rem", background: "#d4edda", border: "1px solid #c3e6cb", borderRadius: "8px", marginBottom: "1rem", color: "#155724" }}>
+          {msg}
         </div>
+      )}
 
-        <div>
-          <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500" }}>
-            URL de imagen de referencia (opcional)
-          </label>
-          <input
-            type="url"
-            value={form.imagen_referencia}
-            onChange={(e) => setForm({ ...form, imagen_referencia: e.target.value })}
-            placeholder="https://ejemplo.com/imagen.jpg"
-            style={{
-              width: "100%",
-              padding: "0.75rem",
-              border: "1px solid #ddd",
-              borderRadius: "8px",
-              fontSize: "1rem"
-            }}
-          />
-          <small style={{ color: "#666", fontSize: "0.85rem" }}>
-            Puedes subir una imagen a imgur.com o similares y pegar el enlace aquí
-          </small>
+      {err && (
+        <div style={{ padding: "1rem", background: "#f8d7da", border: "1px solid #f5c6cb", borderRadius: "8px", marginBottom: "1rem", color: "#721c24" }}>
+          {err}
         </div>
+      )}
 
-        <div>
-          <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500" }}>
-            Nombre completo *
-          </label>
-          <input
-            type="text"
-            value={form.nombre}
-            onChange={(e) => setForm({ ...form, nombre: e.target.value })}
-            placeholder="Juan Pérez"
-            required
-            style={{
-              width: "100%",
-              padding: "0.75rem",
-              border: "1px solid #ddd",
-              borderRadius: "8px",
-              fontSize: "1rem"
-            }}
-          />
-        </div>
-
-        <div>
-          <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500" }}>
-            Teléfono (opcional)
-          </label>
-          <input
-            type="tel"
-            value={form.telefono}
-            onChange={(e) => setForm({ ...form, telefono: e.target.value })}
-            placeholder="+57 300 123 4567"
-            style={{
-              width: "100%",
-              padding: "0.75rem",
-              border: "1px solid #ddd",
-              borderRadius: "8px",
-              fontSize: "1rem"
-            }}
-          />
-        </div>
-
-        {error && (
-          <div style={{
-            padding: "0.75rem",
-            background: "#fee",
-            border: "1px solid #fcc",
-            borderRadius: "8px",
-            color: "#c00"
-          }}>
-            {error}
-          </div>
-        )}
-
-        <button
-          type="submit"
-          disabled={loading}
+      <div style={{ marginBottom: "1.5rem" }}>
+        <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "600" }}>
+          Descripción de tu pedido *
+        </label>
+        <textarea
+          value={descripcion}
+          onChange={(e) => setDescripcion(e.target.value)}
+          rows={5}
+          placeholder="Describe el diseño, colores, tamaño y cualquier detalle importante..."
           style={{
-            padding: "0.75rem 1.5rem",
-            background: loading ? "#ccc" : "#000",
-            color: "white",
-            border: "none",
+            width: "100%",
+            padding: "0.75rem",
+            border: "1px solid #ddd",
             borderRadius: "8px",
             fontSize: "1rem",
-            fontWeight: "500",
-            cursor: loading ? "not-allowed" : "pointer"
+            resize: "vertical"
           }}
-        >
-          {loading ? "Enviando..." : "Enviar Pedido Personalizado"}
-        </button>
-      </form>
-
-      <div style={{
-        marginTop: "2rem",
-        padding: "1rem",
-        background: "#f9f9f9",
-        borderRadius: "8px",
-        borderLeft: "4px solid #007bff"
-      }}>
-        <h3 style={{ marginTop: 0, fontSize: "1rem" }}>💡 Consejos para tu pedido:</h3>
-        <ul style={{ margin: "0.5rem 0 0 0", paddingLeft: "1.5rem", color: "#666" }}>
-          <li>Describe el tamaño aproximado que deseas</li>
-          <li>Especifica colores preferidos</li>
-          <li>Menciona si es para un evento especial</li>
-          <li>Incluye una imagen de referencia si es posible</li>
-        </ul>
+        />
       </div>
+
+      <div style={{ marginBottom: "1.5rem" }}>
+        <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "600" }}>
+          Imagen de referencia (opcional)
+        </label>
+        <input
+          type="file"
+          accept="image/*"
+          onChange={onFile}
+          style={{ display: "block", marginBottom: "1rem" }}
+        />
+        {img && (
+          <img
+            src={img}
+            alt="Referencia"
+            style={{ maxWidth: "200px", borderRadius: "8px", border: "1px solid #ddd" }}
+          />
+        )}
+      </div>
+
+      <h3 style={{ marginBottom: "1rem", color: "#667eea" }}>Datos de Contacto</h3>
+
+      <div style={{ marginBottom: "1rem" }}>
+        <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "600" }}>
+          Nombre completo *
+        </label>
+        <input
+          type="text"
+          value={contacto.nombre}
+          onChange={(e) => setContacto({ ...contacto, nombre: e.target.value })}
+          placeholder="Tu nombre completo"
+          style={{
+            width: "100%",
+            padding: "0.75rem",
+            border: "1px solid #ddd",
+            borderRadius: "8px",
+            fontSize: "1rem"
+          }}
+        />
+      </div>
+
+      <div style={{ marginBottom: "1rem" }}>
+        <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "600" }}>
+          Correo electrónico *
+        </label>
+        <input
+          type="email"
+          value={contacto.email}
+          onChange={(e) => setContacto({ ...contacto, email: e.target.value })}
+          placeholder="tu@email.com"
+          style={{
+            width: "100%",
+            padding: "0.75rem",
+            border: "1px solid #ddd",
+            borderRadius: "8px",
+            fontSize: "1rem"
+          }}
+        />
+      </div>
+
+      <div style={{ marginBottom: "2rem" }}>
+        <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "600" }}>
+          Teléfono *
+        </label>
+        <input
+          type="tel"
+          value={contacto.telefono}
+          onChange={(e) => setContacto({ ...contacto, telefono: e.target.value })}
+          placeholder="+57 300 123 4567"
+          style={{
+            width: "100%",
+            padding: "0.75rem",
+            border: "1px solid #ddd",
+            borderRadius: "8px",
+            fontSize: "1rem"
+          }}
+        />
+      </div>
+
+      <button
+        onClick={submit}
+        disabled={sending}
+        style={{
+          padding: "0.75rem 2rem",
+          background: sending ? "#ccc" : "#667eea",
+          color: "white",
+          border: "none",
+          borderRadius: "8px",
+          fontSize: "1rem",
+          fontWeight: "600",
+          cursor: sending ? "not-allowed" : "pointer",
+          transition: "background 0.3s"
+        }}
+      >
+        {sending ? "Enviando..." : "Enviar Pedido Personalizado"}
+      </button>
     </div>
   );
 }

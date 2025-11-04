@@ -1,6 +1,6 @@
 import { useState, useContext } from "react";
 import { apiLogin, apiMe } from "../api";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom"; // ✅ Importar Link
 import { AuthContext } from "../App";
 
 export default function LoginPage() {
@@ -27,7 +27,7 @@ export default function LoginPage() {
       await apiLogin(form.email, form.password);
       const u = await apiMe();
       setUser(u);
-      navigate(u.is_admin ? "/admin" : "/productos");
+      navigate(u.is_admin ? "/admin" : "/");
     } catch (err) {
       setError(err.message || "Credenciales inválidas. Inténtalo de nuevo.");
     } finally {
@@ -48,7 +48,13 @@ export default function LoginPage() {
         <button type="submit" disabled={sending}>{sending ? "Iniciando..." : "Ingresar"}</button>
         {error && <p style={{color: "red"}}>{error}</p>}
       </form>
-      <p>¿No tienes cuenta? <a href="/registro">Regístrate aquí</a>.</p>
+      <p>
+        ¿No tienes cuenta?{" "}
+        <Link to="/register" style={{ color: "#667eea", textDecoration: "underline" }}>
+          Regístrate aquí
+        </Link>
+        .
+      </p>
     </div>
   );
 }

@@ -10,35 +10,48 @@ export default function LoyaltyPage() {
   }
 
   function handleConfirm() {
-    // Aquí enviarías la suscripción al backend
-    alert(`Suscripción confirmada con método: ${paymentMethod}\nNombre: ${form.nombre}\nEmail: ${form.email}`);
+    alert(
+      `Suscripción confirmada con método: ${paymentMethod}\nNombre: ${form.nombre}\nEmail: ${form.email}`
+    );
     setShowModal(false);
     setForm({ nombre: "", email: "", telefono: "" });
   }
 
   return (
-    <div style={{ maxWidth: "600px", margin: "0 auto", padding: "2rem" }}>
-      <h1>Programa de Fidelización</h1>
-      <p style={{ fontSize: "1.2rem", marginBottom: "1rem", color: "#666" }}>
-        <strong style={{ color: "#000", fontSize: "1.5rem" }}>$10.000</strong> — válido 6 meses
+    <div style={{ padding: "2rem", maxWidth: "700px", margin: "0 auto" }}>
+      <h1 style={{ marginBottom: "1rem", color: "#667eea" }}>🎁 Programa de Fidelización</h1>
+      <p style={{ marginBottom: "2rem", fontSize: "1.1rem", color: "#555" }}>
+        <strong>$10.000</strong> — válido 6 meses
       </p>
-      <p style={{ marginBottom: "1.5rem", color: "#666" }}>
+      <p style={{ marginBottom: "2rem", color: "#666" }}>
         Accede a descuentos exclusivos y beneficios especiales para clientes frecuentes.
       </p>
+
+      <ul style={{ marginBottom: "2rem", lineHeight: "1.8", color: "#555" }}>
+        <li>✅ 10% de descuento en todas tus compras</li>
+        <li>✅ Envío gratuito en pedidos mayores a $50.000</li>
+        <li>✅ Acceso anticipado a nuevos diseños</li>
+        <li>✅ Personalización gratuita en un pedido al mes</li>
+        <li>✅ Atención prioritaria</li>
+      </ul>
+
       <button
         onClick={handleSubscribe}
         style={{
-          padding: "0.75rem 1.5rem",
-          background: "#007bff",
+          padding: "1rem 3rem",
+          background: "#667eea",
           color: "white",
           border: "none",
           borderRadius: "8px",
-          fontSize: "1rem",
+          fontSize: "1.1rem",
+          fontWeight: "600",
           cursor: "pointer",
-          fontWeight: "500"
+          transition: "background 0.3s"
         }}
+        onMouseEnter={(e) => (e.target.style.background = "#5568d3")}
+        onMouseLeave={(e) => (e.target.style.background = "#667eea")}
       >
-        Suscribirse Ahora
+        Suscribirme Ahora
       </button>
 
       {showModal && (
@@ -49,117 +62,107 @@ export default function LoyaltyPage() {
             left: 0,
             right: 0,
             bottom: 0,
-            background: "rgba(0,0,0,0.6)",
+            background: "rgba(0,0,0,0.5)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            zIndex: 1000
+            zIndex: 9999
           }}
           onClick={() => setShowModal(false)}
         >
           <div
+            onClick={(e) => e.stopPropagation()}
             style={{
               background: "white",
-              padding: "2rem",
               borderRadius: "12px",
+              padding: "2rem",
               maxWidth: "500px",
-              width: "90%",
-              boxShadow: "0 4px 20px rgba(0,0,0,0.15)"
+              width: "90%"
             }}
-            onClick={(e) => e.stopPropagation()}
           >
-            <h2 style={{ marginTop: 0, marginBottom: "1.5rem" }}>Método de Pago</h2>
-            
-            {/* Solo Tarjeta y Transferencia */}
-            <div style={{ display: "flex", gap: "1rem", marginBottom: "1.5rem" }}>
-              <button
-                onClick={() => setPaymentMethod("Tarjeta")}
+            <h2 style={{ marginTop: 0 }}>Confirmar Suscripción</h2>
+
+            <div style={{ marginBottom: "1.5rem" }}>
+              <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "600" }}>
+                Nombre completo
+              </label>
+              <input
+                type="text"
+                value={form.nombre}
+                onChange={(e) => setForm({ ...form, nombre: e.target.value })}
+                placeholder="Tu nombre"
                 style={{
-                  flex: 1,
+                  width: "100%",
                   padding: "0.75rem",
-                  background: paymentMethod === "Tarjeta" ? "#1f2121" : "white",
-                  color: paymentMethod === "Tarjeta" ? "white" : "#333",
                   border: "1px solid #ddd",
                   borderRadius: "8px",
-                  cursor: "pointer",
-                  fontSize: "1rem",
-                  fontWeight: "500",
-                  transition: "all 0.2s"
+                  fontSize: "1rem"
                 }}
-              >
-                Tarjeta
-              </button>
-              <button
-                onClick={() => setPaymentMethod("Transferencia")}
-                style={{
-                  flex: 1,
-                  padding: "0.75rem",
-                  background: paymentMethod === "Transferencia" ? "#1f2121" : "white",
-                  color: paymentMethod === "Transferencia" ? "white" : "#333",
-                  border: "1px solid #ddd",
-                  borderRadius: "8px",
-                  cursor: "pointer",
-                  fontSize: "1rem",
-                  fontWeight: "500",
-                  transition: "all 0.2s"
-                }}
-              >
-                Transferencia
-              </button>
+              />
             </div>
 
-            <h3 style={{ fontSize: "1.1rem", marginBottom: "1rem" }}>Contacto para envío</h3>
-            
-            <input
-              type="text"
-              placeholder="Nombre Completo"
-              value={form.nombre}
-              onChange={(e) => setForm({ ...form, nombre: e.target.value })}
-              style={{
-                width: "100%",
-                padding: "0.75rem",
-                marginBottom: "1rem",
-                border: "1px solid #ddd",
-                borderRadius: "8px",
-                fontSize: "1rem"
-              }}
-              required
-            />
-            
-            <input
-              type="email"
-              placeholder="Correo"
-              value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
-              style={{
-                width: "100%",
-                padding: "0.75rem",
-                marginBottom: "1rem",
-                border: "1px solid #ddd",
-                borderRadius: "8px",
-                fontSize: "1rem"
-              }}
-              required
-            />
-            
-            <input
-              type="tel"
-              placeholder="Teléfono (opcional)"
-              value={form.telefono}
-              onChange={(e) => setForm({ ...form, telefono: e.target.value })}
-              style={{
-                width: "100%",
-                padding: "0.75rem",
-                marginBottom: "1.5rem",
-                border: "1px solid #ddd",
-                borderRadius: "8px",
-                fontSize: "1rem"
-              }}
-            />
+            <div style={{ marginBottom: "1.5rem" }}>
+              <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "600" }}>
+                Correo electrónico
+              </label>
+              <input
+                type="email"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                placeholder="tu@email.com"
+                style={{
+                  width: "100%",
+                  padding: "0.75rem",
+                  border: "1px solid #ddd",
+                  borderRadius: "8px",
+                  fontSize: "1rem"
+                }}
+              />
+            </div>
 
-            <p style={{ fontSize: "1.3rem", fontWeight: "bold", marginBottom: "1.5rem" }}>
-              Total: <span style={{ color: "#007bff" }}>$10.000</span>
-            </p>
+            <div style={{ marginBottom: "1.5rem" }}>
+              <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "600" }}>
+                Teléfono
+              </label>
+              <input
+                type="tel"
+                value={form.telefono}
+                onChange={(e) => setForm({ ...form, telefono: e.target.value })}
+                placeholder="+57 300 123 4567"
+                style={{
+                  width: "100%",
+                  padding: "0.75rem",
+                  border: "1px solid #ddd",
+                  borderRadius: "8px",
+                  fontSize: "1rem"
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: "1.5rem" }}>
+              <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "600" }}>
+                Método de pago
+              </label>
+              <select
+                value={paymentMethod}
+                onChange={(e) => setPaymentMethod(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "0.75rem",
+                  border: "1px solid #ddd",
+                  borderRadius: "8px",
+                  fontSize: "1rem"
+                }}
+              >
+                <option>Tarjeta</option>
+                <option>PSE</option>
+                <option>Efectivo</option>
+              </select>
+            </div>
+
+            <div style={{ marginBottom: "1.5rem", padding: "1rem", background: "#f8f9fa", borderRadius: "8px" }}>
+              <p style={{ margin: 0, fontSize: "1.1rem", fontWeight: "600" }}>Total: $10.000</p>
+            </div>
 
             <div style={{ display: "flex", gap: "1rem" }}>
               <button
@@ -167,13 +170,10 @@ export default function LoyaltyPage() {
                 style={{
                   flex: 1,
                   padding: "0.75rem",
-                  background: "white",
-                  color: "#333",
-                  border: "1px solid #ddd",
+                  background: "#e0e0e0",
+                  border: "none",
                   borderRadius: "8px",
-                  cursor: "pointer",
-                  fontSize: "1rem",
-                  fontWeight: "500"
+                  cursor: "pointer"
                 }}
               >
                 Cancelar
@@ -183,17 +183,15 @@ export default function LoyaltyPage() {
                 style={{
                   flex: 1,
                   padding: "0.75rem",
-                  background: form.nombre && form.email ? "#007bff" : "#ccc",
+                  background: "#667eea",
                   color: "white",
                   border: "none",
                   borderRadius: "8px",
-                  cursor: form.nombre && form.email ? "pointer" : "not-allowed",
-                  fontSize: "1rem",
-                  fontWeight: "500"
+                  cursor: "pointer",
+                  fontWeight: "600"
                 }}
-                disabled={!form.nombre || !form.email}
               >
-                Confirmar Pedido
+                Confirmar
               </button>
             </div>
           </div>

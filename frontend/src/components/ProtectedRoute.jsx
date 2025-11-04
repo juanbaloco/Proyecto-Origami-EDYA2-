@@ -1,5 +1,6 @@
-import { Navigate, Outlet } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 import { getToken } from "../api";
-export default function ProtectedRoute() {
-  return getToken() ? <Outlet /> : <Navigate to="/login" replace />;
+
+export default function ProtectedRoute({ children }) {
+  return getToken() ? children : <Navigate to="/login" replace />;
 }

@@ -1,4 +1,8 @@
 from fastapi import FastAPI
+
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
+
 from fastapi.middleware.cors import CORSMiddleware
 from app.db.database import Base, engine, SessionLocal
 from app.models import producto as producto_model
@@ -64,6 +68,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+# ✅ Servir archivos estáticos desde /uploads
+UPLOAD_DIR = Path("uploads")
+UPLOAD_DIR.mkdir(exist_ok=True)
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 # REGISTRO DE RUTAS
 # ⚠️ IMPORTANTE: NO agregues prefix="/api" porque los routers YA lo tienen

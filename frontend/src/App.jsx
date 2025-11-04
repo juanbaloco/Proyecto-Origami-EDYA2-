@@ -1,9 +1,9 @@
 import { BrowserRouter, Routes, Route, Navigate, Link } from "react-router-dom";
-import { createContext, useContext, useEffect, useState } from "react"; // ← AGREGADO useContext
+import { createContext, useContext, useEffect, useState } from "react";
 import { apiMe, clearToken, getToken } from "./api";
+import { CartProvider } from "./contexts/CartContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AdminRoute from "./components/AdminRoute";
-
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import ProductListPage from "./pages/ProductListPage";
@@ -13,84 +13,84 @@ import OrdersPage from "./pages/OrdersPage";
 import CustomOrderPage from "./pages/CustomOrderPage";
 import LoyaltyPage from "./pages/LoyaltyPage";
 import AdminDashboard from "./pages/AdminDashboard";
+import "./App.css";
 
 export const AuthContext = createContext(null);
 
 function Navbar() {
   const { user, setUser } = useContext(AuthContext);
-  
+
   function handleLogout() {
     clearToken();
     setUser(null);
     window.location.href = "/";
   }
 
-  return (
-    <nav style={{
-      display: "flex", 
-      alignItems: "center", 
-      justifyContent: "space-between", 
-      padding: "1rem 2rem", 
-      background: "#f5f5f5", 
-      borderBottom: "1px solid #ddd"
-    }}>
-      <div style={{display: "flex", gap: "1rem", alignItems: "center"}}>
-        <Link to="/" style={{fontWeight: "bold", fontSize: "1.2rem", textDecoration: "none", color: "#333"}}>
-          Origami Arte
-        </Link>
-        <Link to="/" style={{textDecoration: "none", color: "#666"}}>Inicio</Link>
-      </div>
+  const isAdmin = user?.is_admin === true;
+  const showCartFeatures = !isAdmin;
 
-      <div style={{display: "flex", gap: "1rem", alignItems: "center"}}>
-        {user ? (
-          <>
-            {/* Usuario autenticado */}
-            {!user.is_admin && (
-              <>
-                <Link to="/mis-pedidos" style={{textDecoration: "none", color: "#666"}}>Mis Pedidos</Link>
-                <Link to="/pedidos-personalizados" style={{textDecoration: "none", color: "#666"}}>Pedidos Personalizados</Link>
-                <Link to="/fidelizacion" style={{textDecoration: "none", color: "#666"}}>Fidelización</Link>
-              </>
-            )}
-            
-            {/* Admin */}
-            {user.is_admin && (
-              <Link to="/admin" style={{textDecoration: "none", color: "#007bff", fontWeight: "500"}}>
-                Panel de Administración
+  return (
+    <nav className="navbar">
+      <div className="navbar-container">
+        <Link to="/" className="navbar-brand">
+          🎨 Origami Store
+        </Link>
+        
+        <div className="navbar-menu">
+          {/* ✅ MOSTRAR CARRITO Y OTROS ENLACES PARA NO-ADMIN */}
+          {showCartFeatures && (
+            <>
+              <Link to="/cart" className="navbar-link">
+                🛒 Carrito
               </Link>
-            )}
-            
-            <Link to="/carrito" style={{textDecoration: "none", color: "#666"}}>🛒 Carrito</Link>
-            <span style={{color: "#666", fontSize: "0.9rem"}}>{user.email}</span>
-            <button onClick={handleLogout} style={{
-              padding: "0.5rem 1rem", 
-              cursor: "pointer",
-              background: "#dc3545",
-              color: "white",
-              border: "none",
-              borderRadius: "4px"
-            }}>
-              Cerrar Sesión
-            </button>
-          </>
-        ) : (
-          <>
-            {/* Usuario no autenticado */}
-            <Link to="/carrito" style={{textDecoration: "none", color: "#666"}}>🛒 Carrito</Link>
-            <Link to="/login" style={{textDecoration: "none", color: "#666"}}>Iniciar Sesión</Link>
-            <Link to="/registro" style={{
-              textDecoration: "none", 
-              color: "white",
-              background: "#007bff",
-              padding: "0.5rem 1rem",
-              borderRadius: "4px"
-            }}>Registrarse</Link>
-          </>
-        )}
+              
+              {/* ✅ SOLO SI ESTÁ LOGEADO: mostrar enlaces adicionales */}
+              {user && (
+                <>
+                  <Link to="/orders" className="navbar-link">
+                    📦 Mis Pedidos
+                  </Link>
+                  <Link to="/custom-order" className="navbar-link">
+                    ✨ Pedido Personalizado
+                  </Link>
+                  <Link to="/loyalty" className="navbar-link">
+                    🎁 Fidelización
+                  </Link>
+                </>
+              )}
+            </>
+          )}
+          
+          {/* ✅ SOLO MOSTRAR PARA ADMIN */}
+          {user?.is_admin && (
+            <Link to="/admin" className="navbar-link">
+              ⚙️ Panel Admin
+            </Link>
+          )}
+          
+          {user ? (
+            <div className="navbar-user">
+              <span className="navbar-username">👋 {user.username}</span>
+              <button onClick={handleLogout} className="navbar-logout">
+                Cerrar Sesión
+              </button>
+            </div>
+          ) : (
+            <div className="navbar-auth">
+              <Link to="/login" className="navbar-link">
+                Iniciar Sesión
+              </Link>
+              <Link to="/register" className="navbar-link navbar-link--primary">
+                Registrarse
+              </Link>
+            </div>
+          )}
+        </div>
       </div>
     </nav>
   );
 }
+
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -98,44 +98,110 @@ export default function App() {
 
   useEffect(() => {
     const t = getToken();
-    if (!t) { setReady(true); return; }
+    if (!t) {
+      setReady(true);
+      return;
+    }
+    
     apiMe()
-      .then(setUser)
-      .catch(() => { clearToken(); setUser(null); })
+      .then((u) => {
+        console.log("✅ Usuario cargado:", u);
+        setUser(u);
+      })
+      .catch(() => {
+        clearToken();
+        setUser(null);
+      })
       .finally(() => setReady(true));
   }, []);
 
-  if (!ready) return <div style={{padding: "2rem"}}>Cargando...</div>;
+  if (!ready) return <div className="loading">Cargando...</div>;
 
   return (
     <AuthContext.Provider value={{ user, setUser }}>
-      <BrowserRouter>
-        <Navbar />
-        <div style={{padding: "2rem"}}>
-          <Routes>
-            {/* Rutas públicas */}
-            <Route path="/" element={<ProductListPage />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/registro" element={<RegisterPage />} />
-            <Route path="/carrito" element={<CartPage />} />
+      <CartProvider>
+        <BrowserRouter>
+          <Navbar />
+          <div className="main-content">
+            <Routes>
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/register" element={<RegisterPage />} />
+              
+              {/* ✅ HOME: TODOS VEN PRODUCTOS (incluye admin) */}
+              <Route path="/" element={<ProductListPage />} />
+              <Route path ="/products" element={<ProductListPage />} />
 
-            {/* Rutas protegidas para usuarios autenticados */}
-            <Route element={<ProtectedRoute />}>
-              <Route path="/mis-pedidos" element={<OrdersPage />} />
-              <Route path="/pedidos-personalizados" element={<CustomOrderPage />} />
-              <Route path="/fidelizacion" element={<LoyaltyPage />} />
-            </Route>
-
-            {/* Rutas protegidas para admin */}
-            <Route element={<AdminRoute />}>
-              <Route path="/admin" element={<AdminDashboard />} />
-              <Route path="/productos/nuevo" element={<ProductCreatePage />} />
-            </Route>
-
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </div>
-      </BrowserRouter>
+              {/* ✅ RUTAS SOLO PARA USUARIOS NO-ADMIN */}
+              <Route
+                path="/cart"
+                element={
+                  user?.is_admin ? (
+                    <Navigate to="/admin" replace />
+                  ) : (
+                    
+                      <CartPage />
+                    
+                  )
+                }
+              />
+              <Route
+                path="/orders"
+                element={
+                  user?.is_admin ? (
+                    <Navigate to="/admin" replace />
+                  ) : (
+                    <ProtectedRoute>
+                      <OrdersPage />
+                    </ProtectedRoute>
+                  )
+                }
+              />
+              <Route
+                path="/custom-order"
+                element={
+                  user?.is_admin ? (
+                    <Navigate to="/admin" replace />
+                  ) : (
+                    <ProtectedRoute>
+                      <CustomOrderPage />
+                    </ProtectedRoute>
+                  )
+                }
+              />
+              <Route
+                path="/loyalty"
+                element={
+                  user?.is_admin ? (
+                    <Navigate to="/admin" replace />
+                  ) : (
+                    <ProtectedRoute>
+                      <LoyaltyPage />
+                    </ProtectedRoute>
+                  )
+                }
+              />
+              
+              {/* ✅ RUTAS SOLO PARA ADMIN */}
+              <Route
+                path="/admin"
+                element={
+                  <AdminRoute>
+                    <AdminDashboard />
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path="/admin/products/new"
+                element={
+                  <AdminRoute>
+                    <ProductCreatePage />
+                  </AdminRoute>
+                }
+              />
+            </Routes>
+          </div>
+        </BrowserRouter>
+      </CartProvider>
     </AuthContext.Provider>
   );
 }

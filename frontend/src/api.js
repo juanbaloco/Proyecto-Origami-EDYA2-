@@ -1,106 +1,327 @@
-// src/api.js
-const join = (a, b) => {
-  const baseClean = String(a).replace(/\/+$/, '');
-  const pathClean = String(b).replace(/^\/+/, '');
-  return `${baseClean}/${pathClean}`;
-};
-export const BASE = import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000";
-export const PRODUCTS_PATH = import.meta.env.VITE_PRODUCTS_PATH ?? "/api/productos";
+// ============================================
+// CONFIGURATION
+// ============================================
 
-export function setToken(t){ localStorage.setItem("auth_token", t); }
-export function getToken(){ return localStorage.getItem("auth_token"); }
-export function clearToken(){ localStorage.removeItem("auth_token"); }
+const API_BASE_URL = "http://localhost:8000/api";
 
-function authHeader(){ const t=getToken(); return t?{Authorization:`Bearer ${t}`}:{}; }
-async function safeJson(res){ try{return await res.json();}catch{return null;} }
-const detail = (d)=> Array.isArray(d)? d[0]?.msg : (typeof d==='string'?d : d?.detail);
-const err = (res, body, fallback)=> { throw new Error(detail(body)||`${fallback} ${res.status}`); };
+// ============================================
+// TOKEN MANAGEMENT
+// ============================================
 
-// Auth
-export async function apiLogin(email, password){
-  const res = await fetch(join(BASE,"/api/auth/login"), {
-    method:"POST", headers:{ "Content-Type":"application/x-www-form-urlencoded" },
-    body: new URLSearchParams({ username: email, password })
-  });
-  const body = await safeJson(res); if(!res.ok) err(res, body, "POST login");
-  setToken(body.access_token); return body;
+export function getToken() {
+  return localStorage.getItem("token");
 }
 
-export async function apiRegister({username,email,password}){
-  const res = await fetch(join(BASE,"/api/auth/register"), {
-    method:"POST", headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({ username, email, password })
-  });
-  const body = await safeJson(res); if(!res.ok) err(res, body, "POST register");
-  return body;
+export function setToken(token) {
+  localStorage.setItem("token", token);
 }
 
-export async function apiMe(){
-  const res = await fetch(join(BASE,"/api/auth/me"), { headers:{...authHeader()} });
-  const body = await safeJson(res); if(!res.ok) err(res, body, "GET me");
-  return body;
+export function clearToken() {
+  localStorage.removeItem("token");
 }
 
-// Productos
-export async function apiGetProducts({ q="", categoria="", offset=0, limit=12 } = {}){
-  // No agregues barra final manualmente
-  const url = new URL(join(BASE, PRODUCTS_PATH));
-  if(q) url.searchParams.set("q", q);
-  if(categoria) url.searchParams.set("categoria", categoria);
-  url.searchParams.set("offset", offset);
-  url.searchParams.set("limit", limit);
+function getHeaders(includeContentType = true) {
+  const token = getToken();
+  const headers = {};
   
-  const res = await fetch(url, { headers:{...authHeader()} });
-  if(!res.ok) throw new Error(`GET productos ${res.status}`);
-  return { data: await res.json(), total: Number(res.headers.get("X-Total-Count"))||0 };
+  if (includeContentType) {
+    headers["Content-Type"] = "application/json";
+  }
+  
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  
+  return headers;
 }
 
-export async function apiCreateProduct(payload){
-  const res = await fetch(join(BASE, PRODUCTS_PATH), {
-    method:"POST", headers:{ "Content-Type":"application/json", ...authHeader() },
-    body: JSON.stringify({ ...payload, precio: Number(payload.precio), stock: Number(payload.stock ?? 0) }),
+// ============================================
+// ERROR HANDLING
+// ============================================
+
+// ✅ FUNCIÓN MEJORADA para extraer mensajes de error de FastAPI
+const extractErrorMessage = (data) => {
+  // FastAPI 422 validation errors (array de errores)
+  if (Array.isArray(data)) {
+    return data.map(e => `${e.loc?.join('→') || 'campo'}: ${e.msg}`).join(', ');
+  }
+  
+  // FastAPI detail property
+  if (data?.detail) {
+    if (typeof data.detail === 'string') return data.detail;
+    if (Array.isArray(data.detail)) {
+      return data.detail.map(e => `${e.loc?.join('→') || 'campo'}: ${e.msg}`).join(', ');
+    }
+  }
+  
+  // String directo
+  if (typeof data === 'string') return data;
+  
+  // Fallback
+  return JSON.stringify(data);
+};
+
+// ============================================
+// AUTHENTICATION
+// ============================================
+
+export async function apiLogin(username, password) {
+  const formData = new URLSearchParams();
+  formData.append("username", username);
+  formData.append("password", password);
+
+  const res = await fetch(`${API_BASE_URL}/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: formData,
   });
-  const body = await safeJson(res);
-  if(!res.ok) err(res, body, "POST productos");
-  return body;
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(extractErrorMessage(error) || "Login failed");
+  }
+
+  const data = await res.json();
+  setToken(data.access_token);
+  return data;
 }
 
-// Pedidos
-export async function apiCreateOrder({ contacto, items }){
-  const res = await fetch(join(BASE,"/api/pedidos"), {
-    method:"POST", headers:{ "Content-Type":"application/json", ...authHeader() },
-    body: JSON.stringify({ contacto, items })
+export async function apiRegister(data) {
+  const res = await fetch(`${API_BASE_URL}/auth/register`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
   });
-  const body = await safeJson(res); if(!res.ok) err(res, body, "POST pedidos");
-  return body;
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(extractErrorMessage(error) || "Registration failed");
+  }
+
+  return res.json();
 }
 
-export async function apiCreateCustomOrder({ contacto, descripcion, imagen_referencia }){
-  const res = await fetch(join(BASE,"/api/pedidos/personalizado"), {
-    method:"POST", headers:{ "Content-Type":"application/json", ...authHeader() },
-    body: JSON.stringify({ contacto, descripcion, imagen_referencia })
+export async function apiMe() {
+  const res = await fetch(`${API_BASE_URL}/auth/me`, {
+    headers: getHeaders(),
   });
-  const body = await safeJson(res); if(!res.ok) err(res, body, "POST personalizado");
-  return body;
+
+  if (!res.ok) {
+    throw new Error("Failed to fetch user data");
+  }
+
+  return res.json();
 }
 
-export async function apiMyOrders(){
-  const res = await fetch(join(BASE,"/api/pedidos/mis-pedidos"), { headers:{...authHeader()} });
-  const body = await safeJson(res); if(!res.ok) err(res, body, "GET mis-pedidos");
-  return body;
-}
+// ============================================
+// PRODUCTS
+// ============================================
 
-export async function apiAllOrders(){
-  const res = await fetch(join(BASE,"/api/pedidos"), { headers:{...authHeader()} });
-  const body = await safeJson(res); if(!res.ok) err(res, body, "GET pedidos");
-  return body;
-}
-
-export async function apiUpdateOrderStatus(id, estado){
-  const res = await fetch(join(BASE, `/api/pedidos/${id}/estado`), {
-    method:"PUT", headers:{ "Content-Type":"application/json", ...authHeader() },
-    body: JSON.stringify({ estado })
+export async function apiGetProducts() {
+  const res = await fetch(`${API_BASE_URL}/productos`, {
+    headers: getHeaders(),
   });
-  const body = await safeJson(res); if(!res.ok) err(res, body, "PUT estado");
-  return body;
+
+  if (!res.ok) {
+    throw new Error("Failed to fetch products");
+  }
+
+  return res.json();
 }
+
+export async function apiCreateProduct(data) {
+  const token = getToken();
+  if (!token) throw new Error("No hay token");
+
+  const headers = {
+    Authorization: `Bearer ${token}`,
+  };
+
+  // ✅ NO agregues Content-Type si es FormData (el navegador lo hace automático)
+  if (!(data instanceof FormData)) {
+    headers["Content-Type"] = "application/json";
+  }
+
+  console.log("📦 Enviando producto:", data);
+
+  const res = await fetch(`${API_BASE_URL}/productos`, {
+    method: "POST",
+    headers,
+    body: data instanceof FormData ? data : JSON.stringify(data),
+  });
+
+  if (res.status === 401) {
+    clearToken();
+    throw new Error("Sesión expirada");
+  }
+
+  if (!res.ok) {
+    const error = await res.json();
+    console.error("❌ Error del servidor:", error);
+    throw new Error(extractErrorMessage(error) || "Failed to create product");
+  }
+
+  const result = await res.json();
+  console.log("✅ Producto creado exitosamente:", result);
+  return result;
+}
+
+export async function apiUpdateProduct(productId, productData) {
+  const res = await fetch(`${API_BASE_URL}/productos/${productId}`, {
+    method: "PUT",
+    headers: getHeaders(),
+    body: JSON.stringify(productData),
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(extractErrorMessage(error) || "Failed to update product");
+  }
+
+  return res.json();
+}
+
+export async function apiDeleteProduct(productId) {
+  const res = await fetch(`${API_BASE_URL}/productos/${productId}`, {
+    method: "DELETE",
+    headers: getHeaders(),
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(extractErrorMessage(error) || "Failed to delete product");
+  }
+
+  return res.ok;
+}
+
+// ✅ NUEVO: Crear pedido como invitado (sin autenticación)
+export async function apiCreateGuestOrder(orderData) {
+  const res = await fetch(`${API_BASE_URL}/pedidos/guest`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(orderData),
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(extractErrorMessage(error) || "Error al crear pedido de invitado");
+  }
+
+  return res.json();
+}
+
+
+// ============================================
+// ORDERS
+// ============================================
+
+export async function apiAllOrders() {
+  const res = await fetch(`${API_BASE_URL}/pedidos/`, {
+    headers: getHeaders(),
+  });
+
+  if (!res.ok) {
+    throw new Error("Failed to fetch orders");
+  }
+
+  return res.json();
+}
+
+export async function apiMyOrders() {
+  const res = await fetch(`${API_BASE_URL}/pedidos/mis-pedidos`, {
+    headers: getHeaders(),
+  });
+
+  if (!res.ok) {
+    throw new Error("Failed to fetch my orders");
+  }
+
+  return res.json();
+}
+
+export async function apiUpdateOrderStatus(orderId, status) {
+  const res = await fetch(`${API_BASE_URL}/pedidos/${orderId}/estado`, {
+    method: "PUT",
+    headers: getHeaders(),
+    body: JSON.stringify({ estado: status }),
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(extractErrorMessage(error) || "Failed to update order status");
+  }
+
+  return res.json();
+}
+
+export async function apiCreateOrder(orderData) {
+  const res = await fetch(`${API_BASE_URL}/pedidos`, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(orderData),
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(extractErrorMessage(error) || "Failed to create order");
+  }
+
+  return res.json();
+}
+
+export async function apiCustomOrder(customOrderData) {
+  const res = await fetch(`${API_BASE_URL}/pedidos/personalizado`, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(customOrderData),
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(extractErrorMessage(error) || "Failed to create custom order");
+  }
+
+  return res.json();
+}
+
+// ============================================
+// LOYALTY
+// ============================================
+
+export async function apiGetLoyalty() {
+  const res = await fetch(`${API_BASE_URL}/fidelizacion/mi-puntos`, {
+    headers: getHeaders(),
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(extractErrorMessage(error) || "Failed to fetch loyalty points");
+  }
+
+  return res.json();
+}
+
+// ============================================
+// CATEGORIES
+// ============================================
+
+export async function apiGetCategories() {
+  const res = await fetch(`${API_BASE_URL}/categorias`, {
+    headers: getHeaders(),
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(extractErrorMessage(error) || "Failed to fetch categories");
+  }
+
+  return res.json();
+}
+
+// ============================================
+// ALIASES FOR COMPATIBILITY
+// ============================================
+
+export { apiMyOrders as apiGetMyOrders };
+export { apiCustomOrder as apiCreateCustomOrder };
