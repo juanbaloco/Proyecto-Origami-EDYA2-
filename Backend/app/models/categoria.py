@@ -1,12 +1,10 @@
-from sqlalchemy import Column, String
-from sqlalchemy.orm import relationship
+from sqlalchemy import Column, Integer, String
 from app.db.database import Base
 
 class Categoria(Base):
-    __tablename__ = "Categoria"
+    __tablename__ = "categorias"
     
-    slug = Column(String, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     nombre = Column(String, nullable=False)
-    
-    # Relación con productos
-    productos = relationship("Producto", back_populates="categoria")
+    slug = Column(String, unique=True, nullable=False, index=True)
+    descripcion = Column(String, nullable=True)

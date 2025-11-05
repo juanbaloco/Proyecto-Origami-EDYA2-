@@ -11,7 +11,10 @@ class ProductoBase(BaseModel):
     imagen_url: Optional[str] = None
     activo: bool = True
     stock: int = Field(ge=0, default=0)
-    categoria_slug: Optional[str] = Field(default=None, description="3d|filigrama|pliegues|ensambles")
+    categoria: Optional[str] = Field(
+        default=None, 
+        description="Slug de la categoría: origami-3d | filigrana | tradicional-pliegues"
+    )
 
 class ProductoCreate(ProductoBase):
     pass
@@ -26,10 +29,16 @@ class ProductoUpdate(BaseModel):
     imagen_url: Optional[str] = None
     activo: Optional[bool] = None
     stock: Optional[int] = Field(default=None, ge=0)
-    categoria_slug: Optional[str] = Field(default=None, description="3d|filigrama|pliegues|ensambles")
+    categoria: Optional[str] = Field(
+        default=None,
+        description="Slug de la categoría"
+    )
+
+    class Config:
+        from_attributes = True
 
 class ProductoOut(ProductoBase):
     id: int
-    
+
     class Config:
         from_attributes = True

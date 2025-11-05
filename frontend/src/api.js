@@ -319,9 +319,24 @@ export async function apiGetCategories() {
   return res.json();
 }
 
-// ============================================
-// ALIASES FOR COMPATIBILITY
-// ============================================
+// Agregar estas nuevas funciones al archivo api.js existente:
+
+//✅ NUEVO: Obtener solo pedidos normales (del carrito)
+export const apiGetPedidosNormales = () => {
+  const token = localStorage.getItem("token");
+  return fetch("http://localhost:8000/api/pedidos/normales", {
+    headers: { Authorization: `Bearer ${token}` },
+  }).then((r) => r.json());
+};
+
+// ✅ NUEVO: Obtener solo pedidos personalizados
+export const apiGetPedidosPersonalizados = () => {
+  const token = localStorage.getItem("token");
+  return fetch("http://localhost:8000/api/pedidos/personalizados", {
+    headers: { Authorization: `Bearer ${token}` },
+  }).then((r) => r.json());
+};
+
 
 export { apiMyOrders as apiGetMyOrders };
 export { apiCustomOrder as apiCreateCustomOrder };
