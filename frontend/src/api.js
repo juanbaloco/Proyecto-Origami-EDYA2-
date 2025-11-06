@@ -1,13 +1,12 @@
 // ============================================
 // CONFIGURATION
 // ============================================
-
 const API_BASE_URL = "http://localhost:8000/api";
+const API_URL = "http://localhost:8000";
 
 // ============================================
 // TOKEN MANAGEMENT
 // ============================================
-
 export function getToken() {
   return localStorage.getItem("token");
 }
@@ -38,33 +37,23 @@ function getHeaders(includeContentType = true) {
 // ============================================
 // ERROR HANDLING
 // ============================================
-
-// ✅ FUNCIÓN MEJORADA para extraer mensajes de error de FastAPI
 const extractErrorMessage = (data) => {
-  // FastAPI 422 validation errors (array de errores)
   if (Array.isArray(data)) {
     return data.map(e => `${e.loc?.join('→') || 'campo'}: ${e.msg}`).join(', ');
   }
-  
-  // FastAPI detail property
   if (data?.detail) {
     if (typeof data.detail === 'string') return data.detail;
     if (Array.isArray(data.detail)) {
       return data.detail.map(e => `${e.loc?.join('→') || 'campo'}: ${e.msg}`).join(', ');
     }
   }
-  
-  // String directo
   if (typeof data === 'string') return data;
-  
-  // Fallback
   return JSON.stringify(data);
 };
 
 // ============================================
 // AUTHENTICATION
 // ============================================
-
 export async function apiLogin(username, password) {
   const formData = new URLSearchParams();
   formData.append("username", username);
@@ -116,7 +105,6 @@ export async function apiMe() {
 // ============================================
 // PRODUCTS
 // ============================================
-
 export async function apiGetProducts() {
   const res = await fetch(`${API_BASE_URL}/productos`, {
     headers: getHeaders(),
@@ -137,7 +125,6 @@ export async function apiCreateProduct(data) {
     Authorization: `Bearer ${token}`,
   };
 
-  // ✅ NO agregues Content-Type si es FormData (el navegador lo hace automático)
   if (!(data instanceof FormData)) {
     headers["Content-Type"] = "application/json";
   }
@@ -195,7 +182,6 @@ export async function apiDeleteProduct(productId) {
   return res.ok;
 }
 
-// ✅ NUEVO: Crear pedido como invitado (sin autenticación)
 export async function apiCreateGuestOrder(orderData) {
   const res = await fetch(`${API_BASE_URL}/pedidos/guest`, {
     method: "POST",
@@ -211,11 +197,9 @@ export async function apiCreateGuestOrder(orderData) {
   return res.json();
 }
 
-
 // ============================================
 // ORDERS
 // ============================================
-
 export async function apiAllOrders() {
   const res = await fetch(`${API_BASE_URL}/pedidos/`, {
     headers: getHeaders(),
@@ -240,20 +224,21 @@ export async function apiMyOrders() {
   return res.json();
 }
 
-export async function apiUpdateOrderStatus(orderId, status) {
-  const res = await fetch(`${API_BASE_URL}/pedidos/${orderId}/estado`, {
+// ✅ CORREGIDO: Usar API_BASE_URL en lugar de API_URL
+export const apiUpdateOrderStatus = async (pedidoId, nuevoEstado) => {
+  const response = await fetch(`${API_BASE_URL}/pedidos/${pedidoId}/estado`, {
     method: "PUT",
-    headers: getHeaders(),
-    body: JSON.stringify({ estado: status }),
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${localStorage.getItem("token")}`,
+    },
+    body: JSON.stringify({ estado: nuevoEstado }),
   });
 
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(extractErrorMessage(error) || "Failed to update order status");
-  }
-
-  return res.json();
-}
+  if (response.status === 401) throw new Error("Sesión expirada");
+  if (!response.ok) throw new Error(await response.text());
+  return await response.json();
+};
 
 export async function apiCreateOrder(orderData) {
   const res = await fetch(`${API_BASE_URL}/pedidos`, {
@@ -288,7 +273,6 @@ export async function apiCustomOrder(customOrderData) {
 // ============================================
 // LOYALTY
 // ============================================
-
 export async function apiGetLoyalty() {
   const res = await fetch(`${API_BASE_URL}/fidelizacion/mi-puntos`, {
     headers: getHeaders(),
@@ -305,7 +289,6 @@ export async function apiGetLoyalty() {
 // ============================================
 // CATEGORIES
 // ============================================
-
 export async function apiGetCategories() {
   const res = await fetch(`${API_BASE_URL}/categorias`, {
     headers: getHeaders(),
@@ -319,24 +302,37 @@ export async function apiGetCategories() {
   return res.json();
 }
 
-// Agregar estas nuevas funciones al archivo api.js existente:
-
-//✅ NUEVO: Obtener solo pedidos normales (del carrito)
+// ============================================
+// ADMIN ORDERS
+// ============================================
 export const apiGetPedidosNormales = () => {
   const token = localStorage.getItem("token");
-  return fetch("http://localhost:8000/api/pedidos/normales", {
+  return fetch(`${API_URL}/api/pedidos/normales`, {
     headers: { Authorization: `Bearer ${token}` },
   }).then((r) => r.json());
 };
 
-// ✅ NUEVO: Obtener solo pedidos personalizados
 export const apiGetPedidosPersonalizados = () => {
   const token = localStorage.getItem("token");
-  return fetch("http://localhost:8000/api/pedidos/personalizados", {
+  return fetch(`${API_URL}/api/pedidos/personalizados`, {
     headers: { Authorization: `Bearer ${token}` },
   }).then((r) => r.json());
 };
 
+export async function apiUpdatePedidoPersonalizado(pedidoId, data) {
+  const token = localStorage.getItem("token");
+  const res = await fetch(`${API_URL}/api/pedidos/${pedidoId}/personalizado`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error("Error actualizando pedido personalizado");
+  return await res.json();
+}
 
+// Aliases
 export { apiMyOrders as apiGetMyOrders };
 export { apiCustomOrder as apiCreateCustomOrder };
