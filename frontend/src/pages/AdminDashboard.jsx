@@ -155,15 +155,38 @@ export default function AdminDashboard() {
   };
 
   const changeStatus = (orderId, newStatus) => {
+  // Si el nuevo estado es CANCELADO, pide un comentario, actualiza y remueve de la lista
+  if (newStatus === "cancelado") {
+    const comentario = prompt("Escribe el motivo de la cancelación:");
+    if (!comentario || comentario.trim().length < 3) {
+      alert("Debes ingresar un comentario para cancelar.");
+      return;
+    }
+    apiUpdateOrderStatus(orderId, newStatus, comentario)
+      .then(() => {
+        setOrders(prev => prev.filter(o => o.id !== orderId));
+        alert("Pedido cancelado y eliminado del panel.");
+      })
+      .catch((e) => {
+        alert("Error cancelando el pedido");
+        console.error(e);
+      });
+  } else {
+    // Si es otro estado, simplemente lo actualiza en el UI
     apiUpdateOrderStatus(orderId, newStatus)
       .then(() => {
-        setOrders((prev) =>
-          prev.map((o) => (o.id === orderId ? { ...o, estado: newStatus } : o))
-        );
+        setOrders(prev => prev.map(o =>
+          o.id === orderId ? { ...o, estado: newStatus } : o
+        ));
         alert(`Pedido actualizado a: ${newStatus}`);
       })
-      .catch((e) => console.error(e));
-  };
+      .catch((e) => {
+        alert("Error actualizando el pedido");
+        console.error(e);
+      });
+  }
+};
+
 
   const deleteProduct = async (id) => {
     if (!confirm("¿Eliminar este producto?")) return;

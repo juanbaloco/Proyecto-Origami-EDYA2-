@@ -12,6 +12,7 @@ from app.core.config import settings
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
+
 # ===== REGISTRO DE NUEVO USUARIO =====
 @router.post("/register", response_model=UsuarioOut, status_code=status.HTTP_201_CREATED)
 def register(user: UsuarioCreate, db: Session = Depends(get_db)):
@@ -36,12 +37,12 @@ def register(user: UsuarioCreate, db: Session = Depends(get_db)):
             detail="El nombre de usuario ya está en uso"
         )
     
-    # Crear nuevo usuario
+    # ✅ Crear nuevo usuario con campos correctos
     nuevo_usuario = Usuario(
-        username=user.username,
+        username=user.username,  # ✅ username
         email=user.email,
-        password_hash=get_password_hash(user.password),
-        is_admin=False  # Por defecto, no es admin
+        password_hash=get_password_hash(user.password),  # ✅ password_hash
+        is_admin=False  # ✅ is_admin
     )
     
     db.add(nuevo_usuario)
@@ -49,6 +50,7 @@ def register(user: UsuarioCreate, db: Session = Depends(get_db)):
     db.refresh(nuevo_usuario)
     
     return nuevo_usuario
+
 
 # ===== LOGIN (INICIAR SESIÓN) =====
 @router.post("/login", response_model=Token)
@@ -70,17 +72,17 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
             detail="Usuario no encontrado. Verifica el correo electrónico."
         )
     
-    # Verificar contraseña
-    if not verify_password(form_data.password, usuario.password_hash):
+    # ✅ Verificar contraseña con campo correcto
+    if not verify_password(form_data.password, usuario.password_hash):  # ✅ password_hash
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Contraseña incorrecta"
         )
     
     # Generar token JWT
-    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)  # ← CORREGIDO AQUÍ
+    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": usuario.email, "is_admin": usuario.is_admin},
+        data={"sub": usuario.email, "is_admin": usuario.is_admin},  # ✅ is_admin
         expires_delta=access_token_expires
     )
     
@@ -88,6 +90,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
         "access_token": access_token, 
         "token_type": "bearer"
     }
+
 
 # ===== OBTENER INFORMACIÓN DEL USUARIO ACTUAL =====
 @router.get("/me", response_model=UsuarioOut)

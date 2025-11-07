@@ -1,22 +1,24 @@
-from sqlalchemy import Column, Integer, String, Float, Boolean, Text
+# app/models/producto.py
+
+from sqlalchemy import Column, Integer, String, Float, Boolean
 from sqlalchemy.orm import relationship
 from app.db.database import Base
 
 class Producto(Base):
-    __tablename__ = "Producto"
+    __tablename__ = "productos"
     
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    id = Column(Integer, primary_key=True, index=True)
     nombre = Column(String(80), nullable=False)
-    descripcion = Column(Text, nullable=True)
+    descripcion = Column(String(500))
     precio = Column(Float, nullable=False)
-    color = Column(String, nullable=True)
-    tamano = Column(String, nullable=True)
-    material = Column(String, nullable=True)
-    imagen_url = Column(String, nullable=True)
+    color = Column(String(50))
+    tamano = Column(String(50))
+    material = Column(String(100))
+    imagen_url = Column(String(500))
     activo = Column(Boolean, default=True)
     stock = Column(Integer, default=0)
-    categoria = Column(String, nullable=True)
+    categoria = Column(String(100))
     
-    # ✅ Relaciones requeridas por back_populates en otros modelos
+    # ✅ Relaciones con strings
+    pedido_items = relationship("PedidoItem", back_populates="producto")
     items_carrito = relationship("ItemCarrito", back_populates="producto")
-    items_pedido = relationship("PedidoItem", back_populates="producto")

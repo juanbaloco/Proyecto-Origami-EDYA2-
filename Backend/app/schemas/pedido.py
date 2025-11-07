@@ -1,71 +1,57 @@
-from pydantic import BaseModel, EmailStr, ConfigDict
+from pydantic import BaseModel, EmailStr
 from typing import List, Optional
-
 
 class Contacto(BaseModel):
     nombre: str
-    email: EmailStr
+    email: Optional[EmailStr] = None
     telefono: Optional[str] = None
-
 
 class PedidoItem(BaseModel):
     producto_id: int
     cantidad: int
 
-
 class PedidoCreate(BaseModel):
     contacto: Contacto
     items: List[PedidoItem]
+    direccion: Optional[str] = None      # ✅ Nuevo campo
+    metodo_pago: Optional[str] = None    # ✅ Nuevo campo
 
-
-class PedidoPersonalizado(BaseModel):
-    contacto: Contacto
-    descripcion: str
+class PedidoResponse(BaseModel):
+    id: str
+    estado: str
+    tipo: str
+    total: Optional[float] = None
+    descripcion: Optional[str] = None
     imagen_referencia: Optional[str] = None
+    nombre_personalizado: Optional[str] = None
+    precio_personalizado: Optional[float] = None
+    comentario_vendedor: Optional[str] = None
+    contacto: Contacto
+    items: List[PedidoItem]
+    direccion: Optional[str] = None       # ✅ Mostrar en respuesta
+    metodo_pago: Optional[str] = None     # ✅ Mostrar en respuesta
 
+    class Config:
+        from_attributes = True
 
 class PedidoUpdateEstado(BaseModel):
     estado: str
+    comentario_vendedor: Optional[str] = None
 
+class PedidoPersonalizado(BaseModel):
+    nombre_personalizado: str
+    descripcion: str
+    imagen_referencia: Optional[str] = None
+    contacto: Contacto
+    direccion: Optional[str] = None       # ✅ Incluir también aquí
+    metodo_pago: Optional[str] = None     # ✅ Incluir también aquí
 
-class PedidoResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    
-    id: str
-    estado: str
+class GuestOrderCreate(BaseModel):
     contacto: Contacto
     items: List[PedidoItem]
-    tipo: str
-    descripcion: Optional[str] = None
-    imagen_referencia: Optional[str] = None
+    direccion: Optional[str] = None       # ✅ Soporte para invitados
+    metodo_pago: Optional[str] = None     # ✅ Soporte para invitados
 
-
-# ✅ NUEVO: Schema para información de invitado
-class GuestInfo(BaseModel):
-    nombreCompleto: str
-    email: EmailStr
-    whatsapp: str
-    direccion: str
-    metodoPago: str  # "transferencia", "efectivo", "tarjeta"
-
-
-# ✅ NUEVO: Item simple para pedidos de invitados
-class GuestOrderItem(BaseModel):
-    producto_id: int
-    nombre: str
-    precio: float
-    cantidad: int
-
-
-# ✅ NUEVO: Request completo para pedidos de invitados
-class GuestOrderCreate(BaseModel):
-    guestInfo: GuestInfo
-    items: List[GuestOrderItem]
-    total: float
-
-
-# ✅ NUEVO: Response para pedidos de invitados
 class GuestOrderResponse(BaseModel):
-    status: str
-    order_id: str
     message: str
+    pedido_id: str

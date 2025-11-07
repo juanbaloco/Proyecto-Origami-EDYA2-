@@ -11,19 +11,44 @@ from app.core.dependencies import get_db, require_admin, get_current_user
 
 # ✅ Imports de modelos de base de datos
 from app.models.pedido import Pedido, PedidoItem
+from app.models.producto import Producto
 
 # ✅ Imports de schemas (Pydantic)
 from app.schemas.pedido import (
     PedidoCreate, 
-    PedidoResponse,  # ✅ Este es el correcto
+    PedidoResponse,
     PedidoPersonalizado,
     PedidoUpdateEstado,
+    PedidoItem as PedidoItemSchema,
+    Contacto,
     GuestOrderCreate,
     GuestOrderResponse
 )
 
-
 router = APIRouter(prefix="/api/pedidos", tags=["pedidos"])
+
+
+# ✅ Helper function para convertir Pedido a PedidoResponse
+def to_response(p: Pedido) -> PedidoResponse:
+    return PedidoResponse(
+        id=p.id,
+        estado=p.estado,
+        tipo=p.tipo,
+        total=p.total,
+        descripcion=p.descripcion,
+        imagen_referencia=p.imagen_referencia,
+        nombre_personalizado=p.nombre_personalizado,
+        precio_personalizado=p.precio_personalizado,
+        comentario_vendedor=p.comentario_vendedor,
+        contacto=Contacto(
+            nombre=p.contacto_nombre, 
+            email=p.contacto_email, 
+            telefono=p.contacto_telefono
+        ),
+        items=[PedidoItemSchema(producto_id=it.producto_id, cantidad=it.cantidad) for it in p.items],
+        direccion=p.direccion,          # ✅ Incluir dirección
+        metodo_pago=p.metodo_pago       # ✅ Incluir método de pago
+    )
 
 
 # ✅ Schema para actualizar pedido personalizado
@@ -33,7 +58,158 @@ class ActualizarPedidoPersonalizadoRequest(BaseModel):
     comentario_vendedor: Optional[str] = None
 
 
-# ✅ 1. Endpoint para obtener pedidos normales (estandar)
+# ============================================
+# CREAR PEDIDO (USUARIO AUTENTICADO)
+# ============================================
+@router.post("/", response_model=PedidoResponse, status_code=status.HTTP_201_CREATED)
+def crear_pedido(
+    pedido: PedidoCreate, 
+    current_user=Depends(get_current_user), 
+    db: Session = Depends(get_db)
+):
+    """Crear pedido estándar para usuario autenticado"""
+    if not pedido.items:
+        raise HTTPException(status_code=422, detail="El pedido debe tener items")
+    
+    # Validar y descontar stock
+    total = 0.0
+    for it in pedido.items:
+        prod = db.query(Producto).filter(Producto.id == it.producto_id).first()
+        if not prod:
+            raise HTTPException(status_code=404, detail=f"Producto {it.producto_id} no existe")
+        if prod.stock is None or prod.stock < it.cantidad:
+            raise HTTPException(status_code=409, detail=f"Sin stock suficiente para {prod.nombre}")
+        
+        prod.stock -= it.cantidad
+        total += prod.precio * it.cantidad
+    
+    # ✅ Crear pedido con dirección y método de pago
+    nuevo = Pedido(
+        id=str(uuid.uuid4()),
+        estado="pendiente",
+        tipo="estandar",
+        total=total,
+        contacto_nombre=pedido.contacto.nombre,
+        contacto_email=current_user.email,
+        contacto_telefono=pedido.contacto.telefono,
+        direccion=pedido.direccion,          # ✅ Guardar dirección
+        metodo_pago=pedido.metodo_pago       # ✅ Guardar método de pago
+    )
+    
+    db.add(nuevo)
+    db.flush()
+    
+    for it in pedido.items:
+        db.add(PedidoItem(pedido_id=nuevo.id, producto_id=it.producto_id, cantidad=it.cantidad))
+    
+    db.commit()
+    db.refresh(nuevo)
+    return to_response(nuevo)
+
+
+# ============================================
+# CREAR PEDIDO (INVITADO - GUEST)
+# ============================================
+@router.post("/guest", response_model=GuestOrderResponse, status_code=status.HTTP_201_CREATED)
+def crear_pedido_invitado(pedido: GuestOrderCreate, db: Session = Depends(get_db)):
+    """Crear pedido sin autenticación (usuario invitado)"""
+    if not pedido.items:
+        raise HTTPException(status_code=422, detail="El pedido debe tener items")
+    
+    # Validar stock
+    total = 0.0
+    for it in pedido.items:
+        prod = db.query(Producto).filter(Producto.id == it.producto_id).first()
+        if not prod:
+            raise HTTPException(status_code=404, detail=f"Producto {it.producto_id} no existe")
+        if prod.stock is None or prod.stock < it.cantidad:
+            raise HTTPException(status_code=409, detail=f"Sin stock suficiente para {prod.nombre}")
+        
+        prod.stock -= it.cantidad
+        total += prod.precio * it.cantidad
+    
+    # ✅ Crear pedido invitado con dirección y método de pago
+    nuevo = Pedido(
+        id=f"GUEST-{uuid.uuid4().hex[:8].upper()}",
+        estado="pendiente",
+        tipo="estandar",
+        total=total,
+        contacto_nombre=pedido.contacto.nombre,
+        contacto_email=pedido.contacto.email,
+        contacto_telefono=pedido.contacto.telefono,
+        direccion=pedido.direccion,          # ✅ Guardar dirección
+        metodo_pago=pedido.metodo_pago       # ✅ Guardar método de pago
+    )
+    
+    db.add(nuevo)
+    db.flush()
+    
+    for it in pedido.items:
+        db.add(PedidoItem(pedido_id=nuevo.id, producto_id=it.producto_id, cantidad=it.cantidad))
+    
+    db.commit()
+    return GuestOrderResponse(message="Pedido creado exitosamente", pedido_id=nuevo.id)
+
+
+# ============================================
+# MIS PEDIDOS (USUARIO AUTENTICADO)
+# ============================================
+@router.get("/mis-pedidos", response_model=List[PedidoResponse])
+def obtener_mis_pedidos(
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    """Obtener pedidos del usuario autenticado"""
+    pedidos_db = db.query(Pedido).filter(
+        Pedido.contacto_email == current_user.email
+    ).all()
+    
+    return [to_response(p) for p in pedidos_db]
+
+
+# ============================================
+# PEDIDO PERSONALIZADO
+# ============================================
+@router.post("/personalizado", response_model=PedidoResponse, status_code=status.HTTP_201_CREATED)
+def crear_pedido_personalizado(
+    pedido: PedidoPersonalizado, 
+    current_user=Depends(get_current_user), 
+    db: Session = Depends(get_db)
+):
+    """Crear un pedido personalizado"""
+    nuevo = Pedido(
+        id=f"CUSTOM-{uuid.uuid4().hex[:8].upper()}",
+        estado="pendiente",
+        tipo="personalizado",
+        descripcion=pedido.descripcion,
+        imagen_referencia=pedido.imagen_referencia,
+        nombre_personalizado=pedido.nombre_personalizado,
+        contacto_nombre=pedido.contacto.nombre,
+        contacto_email=current_user.email,
+        contacto_telefono=pedido.contacto.telefono,
+        direccion=pedido.direccion,          # ✅ Guardar dirección
+        metodo_pago=pedido.metodo_pago       # ✅ Guardar método de pago
+    )
+    
+    db.add(nuevo)
+    db.commit()
+    db.refresh(nuevo)
+    return to_response(nuevo)
+
+
+# ============================================
+# ADMIN: VER TODOS LOS PEDIDOS
+# ============================================
+@router.get("/", dependencies=[Depends(require_admin)])
+def obtener_todos_pedidos(db: Session = Depends(get_db)):
+    """Obtener todos los pedidos (solo admin)"""
+    pedidos = db.query(Pedido).all()
+    return pedidos
+
+
+# ============================================
+# ADMIN: OBTENER PEDIDOS NORMALES
+# ============================================
 @router.get("/normales", dependencies=[Depends(require_admin)])
 def obtener_pedidos_normales(db: Session = Depends(get_db)):
     """Obtener todos los pedidos normales/estándar (solo admin)"""
@@ -41,7 +217,9 @@ def obtener_pedidos_normales(db: Session = Depends(get_db)):
     return pedidos
 
 
-# ✅ 2. Endpoint para obtener pedidos personalizados
+# ============================================
+# ADMIN: OBTENER PEDIDOS PERSONALIZADOS
+# ============================================
 @router.get("/personalizados", dependencies=[Depends(require_admin)])
 def obtener_pedidos_personalizados(db: Session = Depends(get_db)):
     """Obtener todos los pedidos personalizados (solo admin)"""
@@ -49,7 +227,32 @@ def obtener_pedidos_personalizados(db: Session = Depends(get_db)):
     return pedidos
 
 
-# ✅ 3. Endpoint para actualizar pedido personalizado (nombre, precio, comentario)
+# ============================================
+# ADMIN: ACTUALIZAR ESTADO DEL PEDIDO
+# ============================================
+@router.put("/{pedido_id}/estado", dependencies=[Depends(require_admin)])
+def actualizar_estado_pedido(
+    pedido_id: str,
+    estado_data: PedidoUpdateEstado,
+    db: Session = Depends(get_db)
+):
+    """Actualizar estado de un pedido (solo admin)"""
+    pedido = db.query(Pedido).filter(Pedido.id == pedido_id).first()
+    if not pedido:
+        raise HTTPException(status_code=404, detail="Pedido no encontrado")
+    
+    pedido.estado = estado_data.estado
+    if estado_data.comentario_vendedor:
+        pedido.comentario_vendedor = estado_data.comentario_vendedor
+    
+    db.commit()
+    db.refresh(pedido)
+    return pedido
+
+
+# ============================================
+# ADMIN: ACTUALIZAR PEDIDO PERSONALIZADO
+# ============================================
 @router.patch("/{pedido_id}/personalizado", dependencies=[Depends(require_admin)])
 def actualizar_pedido_personalizado(
     pedido_id: str,
@@ -70,142 +273,4 @@ def actualizar_pedido_personalizado(
     
     db.commit()
     db.refresh(pedido)
-    
     return pedido
-
-
-# ✅ 4. Endpoint para actualizar estado de pedido
-@router.put("/{pedido_id}/estado", dependencies=[Depends(require_admin)])
-def actualizar_estado_pedido(
-    pedido_id: str,
-    estado_data: PedidoUpdateEstado,
-    db: Session = Depends(get_db)
-):
-    """Actualizar estado de un pedido (solo admin)"""
-    pedido = db.query(Pedido).filter(Pedido.id == pedido_id).first()
-    if not pedido:
-        raise HTTPException(status_code=404, detail="Pedido no encontrado")
-    
-    pedido.estado = estado_data.estado
-    db.commit()
-    db.refresh(pedido)
-    return pedido
-
-
-# ✅ 5. Endpoint para crear pedido de invitado (guest)
-@router.post("/guest", response_model=GuestOrderResponse)
-def crear_pedido_invitado(order: GuestOrderCreate, db: Session = Depends(get_db)):
-    """
-    Crear pedido sin autenticación (usuario invitado).
-    Guarda información del cliente y productos solicitados.
-    """
-    try:
-        pedido_id = f"GUEST-{uuid.uuid4().hex[:8].upper()}"
-        
-        nuevo_pedido = Pedido(
-            id=pedido_id,
-            tipo="estandar",
-            estado="pendiente",
-            total=order.total,
-            contacto_nombre=order.guestInfo.nombreCompleto,
-            contacto_email=order.guestInfo.email,
-            contacto_telefono=order.guestInfo.whatsapp,
-            descripcion=f"Método de pago: {order.guestInfo.metodoPago} | Dirección: {order.guestInfo.direccion}"
-        )
-        
-        db.add(nuevo_pedido)
-        db.flush()
-        
-        for item in order.items:
-            pedido_item = PedidoItem(
-                pedido_id=pedido_id,
-                producto_id=item.producto_id,
-                cantidad=item.cantidad
-            )
-            db.add(pedido_item)
-        
-        db.commit()
-        
-        return GuestOrderResponse(
-            status="success",
-            order_id=pedido_id,
-            message="Pedido creado exitosamente. Te contactaremos pronto."
-        )
-    
-    except Exception as e:
-        db.rollback()
-        print(f"❌ Error creando pedido de invitado: {e}")
-        raise HTTPException(status_code=500, detail=f"Error creando pedido: {str(e)}")
-
-
-# ✅ 6. Endpoint para obtener todos los pedidos (admin)
-@router.get("/", dependencies=[Depends(require_admin)])
-def obtener_todos_pedidos(db: Session = Depends(get_db)):
-    """Obtener todos los pedidos (solo admin)"""
-    pedidos = db.query(Pedido).all()
-    return pedidos
-
-
-# ✅ 7. Endpoint para crear pedido personalizado
-@router.post("/personalizado")
-def crear_pedido_personalizado(pedido: PedidoPersonalizado, db: Session = Depends(get_db)):
-    """
-    Crear un pedido personalizado.
-    No requiere autenticación.
-    """
-    try:
-        pedido_id = f"CUSTOM-{uuid.uuid4().hex[:8].upper()}"
-        
-        nuevo_pedido = Pedido(
-            id=pedido_id,
-            tipo="personalizado",
-            estado="pendiente",
-            descripcion=pedido.descripcion,
-            imagen_referencia=pedido.imagen_referencia,
-            contacto_nombre=pedido.contacto.nombre,
-            contacto_email=pedido.contacto.email,
-            contacto_telefono=pedido.contacto.telefono
-        )
-        
-        db.add(nuevo_pedido)
-        db.commit()
-        db.refresh(nuevo_pedido)
-        
-        return {"status": "success", "pedido_id": pedido_id, "message": "Pedido personalizado creado"}
-    
-    except Exception as e:
-        db.rollback()
-        print(f"❌ Error creando pedido personalizado: {e}")
-        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
-
-
-# ✅ 8. Endpoint para obtener pedidos del usuario autenticado
-@router.get("/mis-pedidos", response_model=List[PedidoResponse])  # ✅ Corregido aquí
-def obtener_mis_pedidos(
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
-):
-    """Obtener pedidos del usuario autenticado"""
-    pedidos_db = db.query(Pedido).filter(
-        Pedido.contacto_email == current_user.email
-    ).all()
-
-    # Transformar el resultado a la estructura esperada
-    pedidos = []
-    for p in pedidos_db:
-        pedido = {
-            "id": p.id,
-            "estado": p.estado,
-            "contacto": {
-                "nombre": p.contacto_nombre,
-                "email": p.contacto_email,
-                "telefono": p.contacto_telefono
-            },
-            "items": [],  # ✅ Si tienes items relacionados, transforma aquí
-            "tipo": p.tipo,
-            "descripcion": p.descripcion,
-            "imagen_referencia": p.imagen_referencia
-        }
-        pedidos.append(pedido)
-    
-    return pedidos

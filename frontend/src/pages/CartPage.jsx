@@ -149,12 +149,12 @@ export default function CartPage() {
         </>
       )}
 
-      {/* ✅ Mostrar modal correcto según si está logeado o no */}
+      {/* ✅ Renderiza el modal según login con onClose correcto */}
       {showCheckout && user && (
-        <CheckoutModal open={showCheckout} setOpen={setShowCheckout} />
+        <CheckoutModal onClose={() => setShowCheckout(false)} />
       )}
       {showCheckout && !user && (
-        <GuestCheckoutModal open={showCheckout} setOpen={setShowCheckout} />
+        <GuestCheckoutModal onClose={() => setShowCheckout(false)} />
       )}
     </div>
   );

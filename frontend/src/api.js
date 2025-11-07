@@ -182,6 +182,9 @@ export async function apiDeleteProduct(productId) {
   return res.ok;
 }
 
+// ============================================
+// ORDERS (GUEST USER)
+// ============================================
 export async function apiCreateGuestOrder(orderData) {
   const res = await fetch(`${API_BASE_URL}/pedidos/guest`, {
     method: "POST",
@@ -198,8 +201,23 @@ export async function apiCreateGuestOrder(orderData) {
 }
 
 // ============================================
-// ORDERS
+// ORDERS (AUTHENTICATED USER)
 // ============================================
+export async function apiCreateOrder(orderData) {
+  const res = await fetch(`${API_BASE_URL}/pedidos/`, {  // ✅ Con barra al final
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(orderData),
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(extractErrorMessage(error) || "Failed to create order");
+  }
+
+  return res.json();
+}
+
 export async function apiAllOrders() {
   const res = await fetch(`${API_BASE_URL}/pedidos/`, {
     headers: getHeaders(),
@@ -224,7 +242,7 @@ export async function apiMyOrders() {
   return res.json();
 }
 
-// ✅ CORREGIDO: Usar API_BASE_URL en lugar de API_URL
+// ✅ CORRECTED: Using API_BASE_URL instead of API_URL
 export const apiUpdateOrderStatus = async (pedidoId, nuevoEstado) => {
   const response = await fetch(`${API_BASE_URL}/pedidos/${pedidoId}/estado`, {
     method: "PUT",
@@ -240,21 +258,9 @@ export const apiUpdateOrderStatus = async (pedidoId, nuevoEstado) => {
   return await response.json();
 };
 
-export async function apiCreateOrder(orderData) {
-  const res = await fetch(`${API_BASE_URL}/pedidos`, {
-    method: "POST",
-    headers: getHeaders(),
-    body: JSON.stringify(orderData),
-  });
-
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(extractErrorMessage(error) || "Failed to create order");
-  }
-
-  return res.json();
-}
-
+// ============================================
+// CUSTOM ORDERS
+// ============================================
 export async function apiCustomOrder(customOrderData) {
   const res = await fetch(`${API_BASE_URL}/pedidos/personalizado`, {
     method: "POST",
@@ -307,21 +313,21 @@ export async function apiGetCategories() {
 // ============================================
 export const apiGetPedidosNormales = () => {
   const token = localStorage.getItem("token");
-  return fetch(`${API_URL}/api/pedidos/normales`, {
+  return fetch(`${API_BASE_URL}/pedidos/normales`, {  // ✅ Usando API_BASE_URL
     headers: { Authorization: `Bearer ${token}` },
   }).then((r) => r.json());
 };
 
 export const apiGetPedidosPersonalizados = () => {
   const token = localStorage.getItem("token");
-  return fetch(`${API_URL}/api/pedidos/personalizados`, {
+  return fetch(`${API_BASE_URL}/pedidos/personalizados`, {  // ✅ Usando API_BASE_URL
     headers: { Authorization: `Bearer ${token}` },
   }).then((r) => r.json());
 };
 
 export async function apiUpdatePedidoPersonalizado(pedidoId, data) {
   const token = localStorage.getItem("token");
-  const res = await fetch(`${API_URL}/api/pedidos/${pedidoId}/personalizado`, {
+  const res = await fetch(`${API_BASE_URL}/pedidos/${pedidoId}/personalizado`, {  // ✅ Usando API_BASE_URL
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
@@ -333,6 +339,8 @@ export async function apiUpdatePedidoPersonalizado(pedidoId, data) {
   return await res.json();
 }
 
-// Aliases
+// ============================================
+// ALIASES
+// ============================================
 export { apiMyOrders as apiGetMyOrders };
 export { apiCustomOrder as apiCreateCustomOrder };
