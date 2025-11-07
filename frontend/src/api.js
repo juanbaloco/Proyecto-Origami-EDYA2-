@@ -242,21 +242,26 @@ export async function apiMyOrders() {
   return res.json();
 }
 
-// ✅ CORRECTED: Using API_BASE_URL instead of API_URL
-export const apiUpdateOrderStatus = async (pedidoId, nuevoEstado) => {
+export const apiUpdateOrderStatus = async (pedidoId, nuevoEstado, comentario_cancelacion) => {
+  const body = { estado: nuevoEstado };
+  // Solo incluye el comentario si se provee
+  if (comentario_cancelacion) body.comentario_cancelacion = comentario_cancelacion;
+
   const response = await fetch(`${API_BASE_URL}/pedidos/${pedidoId}/estado`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${localStorage.getItem("token")}`,
     },
-    body: JSON.stringify({ estado: nuevoEstado }),
+    body: JSON.stringify(body),
   });
 
   if (response.status === 401) throw new Error("Sesión expirada");
   if (!response.ok) throw new Error(await response.text());
+
   return await response.json();
 };
+
 
 // ============================================
 // CUSTOM ORDERS

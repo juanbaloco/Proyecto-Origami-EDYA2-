@@ -1,6 +1,6 @@
 # app/api/routes/pedidos.py
 
-from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi import APIRouter, HTTPException, Depends, status, Body 
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from pydantic import BaseModel
@@ -40,6 +40,7 @@ def to_response(p: Pedido) -> PedidoResponse:
         nombre_personalizado=p.nombre_personalizado,
         precio_personalizado=p.precio_personalizado,
         comentario_vendedor=p.comentario_vendedor,
+        comentario_cancelacion=p.comentario_cancelacion,
         contacto=Contacto(
             nombre=p.contacto_nombre, 
             email=p.contacto_email, 
@@ -233,18 +234,16 @@ def obtener_pedidos_personalizados(db: Session = Depends(get_db)):
 @router.put("/{pedido_id}/estado", dependencies=[Depends(require_admin)])
 def actualizar_estado_pedido(
     pedido_id: str,
-    estado_data: PedidoUpdateEstado,
+    estado: str = Body(...),
+    comentario_cancelacion: Optional[str] = Body(None),
     db: Session = Depends(get_db)
 ):
-    """Actualizar estado de un pedido (solo admin)"""
     pedido = db.query(Pedido).filter(Pedido.id == pedido_id).first()
     if not pedido:
         raise HTTPException(status_code=404, detail="Pedido no encontrado")
-    
-    pedido.estado = estado_data.estado
-    if estado_data.comentario_vendedor:
-        pedido.comentario_vendedor = estado_data.comentario_vendedor
-    
+    pedido.estado = estado
+    if estado == "cancelado" and comentario_cancelacion:
+        pedido.comentario_cancelacion = comentario_cancelacion
     db.commit()
     db.refresh(pedido)
     return pedido

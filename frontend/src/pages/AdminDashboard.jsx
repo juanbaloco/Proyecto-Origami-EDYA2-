@@ -155,11 +155,10 @@ export default function AdminDashboard() {
   };
 
   const changeStatus = (orderId, newStatus) => {
-  // Si el nuevo estado es CANCELADO, pide un comentario, actualiza y remueve de la lista
   if (newStatus === "cancelado") {
-    const comentario = prompt("Escribe el motivo de la cancelación:");
+    const comentario = prompt("Escriba el motivo de la cancelación (obligatorio):");
     if (!comentario || comentario.trim().length < 3) {
-      alert("Debes ingresar un comentario para cancelar.");
+      alert("Debes ingresar un motivo.");
       return;
     }
     apiUpdateOrderStatus(orderId, newStatus, comentario)
@@ -172,7 +171,6 @@ export default function AdminDashboard() {
         console.error(e);
       });
   } else {
-    // Si es otro estado, simplemente lo actualiza en el UI
     apiUpdateOrderStatus(orderId, newStatus)
       .then(() => {
         setOrders(prev => prev.map(o =>
@@ -186,6 +184,7 @@ export default function AdminDashboard() {
       });
   }
 };
+
 
 
   const deleteProduct = async (id) => {

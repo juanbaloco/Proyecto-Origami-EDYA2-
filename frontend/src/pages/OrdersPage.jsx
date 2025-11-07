@@ -68,8 +68,20 @@ export default function OrdersPage() {
                      order.estado.charAt(0).toUpperCase() + order.estado.slice(1)}
                   </span>
                 </p>
+                {/* Motivo cancelación */}
+                {order.estado === "cancelado" && order.comentario_cancelacion && (
+                  <div style={{
+                    color: "#b91c1c",
+                    margin: "8px 0",
+                    background: "#fee2e2",
+                    borderRadius: "6px",
+                    padding: "8px"
+                  }}>
+                    <strong>Motivo de la cancelación:</strong>
+                    <div>{order.comentario_cancelacion}</div>
+                  </div>
+                )}
               </div>
-
               {/* Precio (muestra precio personalizado si existe, sino total) */}
               {(order.precio_personalizado || order.total) && (
                 <div style={{ textAlign: "right" }}>
@@ -87,7 +99,6 @@ export default function OrdersPage() {
                 paddingTop: "1rem",
                 marginTop: "1rem" 
               }}>
-                {/* Nombre del producto personalizado */}
                 {order.nombre_personalizado && (
                   <div style={{ marginBottom: "0.75rem" }}>
                     <strong style={{ color: "#333", fontSize: "0.95rem" }}>📝 Nombre del producto:</strong>
@@ -97,7 +108,6 @@ export default function OrdersPage() {
                   </div>
                 )}
 
-                {/* Descripción del pedido */}
                 {order.descripcion && (
                   <div style={{ marginBottom: "0.75rem" }}>
                     <strong style={{ color: "#333", fontSize: "0.95rem" }}>📄 Descripción:</strong>
@@ -112,7 +122,6 @@ export default function OrdersPage() {
                   </div>
                 )}
 
-                {/* Imagen de referencia */}
                 {order.imagen_referencia && (
                   <div style={{ marginBottom: "0.75rem" }}>
                     <strong style={{ color: "#333", fontSize: "0.95rem" }}>🖼️ Imagen de referencia:</strong>
@@ -132,7 +141,6 @@ export default function OrdersPage() {
                   </div>
                 )}
 
-                {/* Comentario del vendedor */}
                 {order.comentario_vendedor && (
                   <div style={{ 
                     marginTop: "1rem",

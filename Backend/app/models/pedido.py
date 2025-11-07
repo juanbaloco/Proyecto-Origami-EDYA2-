@@ -5,6 +5,7 @@ from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.db.database import Base
 
+
 class Pedido(Base):
     __tablename__ = "pedidos"
     
@@ -33,7 +34,10 @@ class Pedido(Base):
     imagen_referencia = Column(String(500), nullable=True)
     nombre_personalizado = Column(String(200), nullable=True)
     precio_personalizado = Column(Float, nullable=True)
-    comentario_vendedor = Column(Text, nullable=True)
+    
+    # ✅ Comentarios (admin/vendedor)
+    comentario_vendedor = Column(Text, nullable=True)  # ✅ AÑADIR ESTA LÍNEA
+    comentario_cancelacion = Column(Text, nullable=True)  # Ya está
     
     # ✅ Timestamps
     created_at = Column(DateTime, default=datetime.utcnow)

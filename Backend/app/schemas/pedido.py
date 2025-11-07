@@ -26,6 +26,7 @@ class PedidoResponse(BaseModel):
     nombre_personalizado: Optional[str] = None
     precio_personalizado: Optional[float] = None
     comentario_vendedor: Optional[str] = None
+    comentario_cancelacion: Optional[str] = None
     contacto: Contacto
     items: List[PedidoItem]
     direccion: Optional[str] = None       # ✅ Mostrar en respuesta
