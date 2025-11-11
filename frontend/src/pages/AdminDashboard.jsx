@@ -6,7 +6,9 @@ import {
   apiCreateProduct,
   apiGetPedidosNormales,
   apiGetPedidosPersonalizados,
-  apiUpdatePedidoPersonalizado  // ✅ NUEVO
+  apiUpdatePedidoPersonalizado,
+  apiDeleteProduct,
+  apiUpdateProduct
 } from "../api";
 import { useNavigate } from "react-router-dom";
 
@@ -51,7 +53,21 @@ export default function AdminDashboard() {
     precio_personalizado: "",
     comentario_vendedor: "",
   });
-
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [editFormData, setEditFormData] = useState({
+    nombre: "",
+    descripcion: "",
+    categoria: "",
+    precio: "",
+    color: "",
+    tamano: "",
+    material: "",
+    stock: "",
+    activo: true,
+  });
+  const [editImageFile, setEditImageFile] = useState(null);
+  const [editImagePreview, setEditImagePreview] = useState("");
+  const [showEditModal, setShowEditModal] = useState(false);
   // ✅ Cargar pedidos normales
   useEffect(() => {
     if (tab === "pedidos") {
@@ -187,24 +203,138 @@ export default function AdminDashboard() {
 
 
 
-  const deleteProduct = async (id) => {
-    if (!confirm("¿Eliminar este producto?")) return;
-    try {
-      const token = localStorage.getItem("token");
-      const res = await fetch(`http://localhost:8000/api/productos/${id}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        alert("Producto eliminado");
-        loadProducts();
-      } else {
-        alert("Error al eliminar");
-      }
-    } catch (e) {
-      console.error(e);
+ const deleteProduct = async (id) => {
+  if (!confirm("¿Eliminar este producto?")) return;
+  try {
+    await apiDeleteProduct(id);  // ✅ Usar la función de api.js
+    alert("Producto eliminado");
+    loadProducts();
+  } catch (e) {
+    console.error("Error al eliminar producto:", e);
+    alert(e.message || "Error al eliminar el producto");
+  }
+};
+const handleEditProduct = (product) => {
+  setEditingProduct(product.id);
+  setEditFormData({
+    nombre: product.nombre || "",
+    descripcion: product.descripcion || "",
+    categoria: product.categoria || "",
+    precio: product.precio || "",
+    color: product.color || "",
+    tamano: product.tamano || "",
+    material: product.material || "",
+    stock: product.stock || "",
+    activo: product.activo ?? true,
+  });
+  setEditImagePreview(product.imagen_url || "");
+  setShowEditModal(true);
+};
+
+// ===== FUNCIÓN PARA MANEJAR CAMBIOS EN FORMULARIO =====
+/**
+ * Maneja los cambios en los campos del formulario de edición
+ * @param {Event} e - Evento del input
+ */
+const handleEditChange = (e) => {
+  const { name, value, type, checked } = e.target;
+  setEditFormData({
+    ...editFormData,
+    [name]: type === "checkbox" ? checked : value,
+  });
+};
+
+// ===== FUNCIÓN PARA MANEJAR CAMBIO DE IMAGEN =====
+/**
+ * Maneja la selección de una nueva imagen para el producto
+ * @param {Event} e - Evento del input file
+ */
+const handleEditImageChange = (e) => {
+  const file = e.target.files?.[0];  // Usar optional chaining
+  
+  if (file) {
+    setEditImageFile(file);
+    
+    // Solo leer si el archivo es válido y es una imagen
+    if (file instanceof File && file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setEditImagePreview(reader.result);
+      };
+      reader.onerror = () => {
+        console.error('Error al leer la imagen');
+        setEditImagePreview('');
+      };
+      reader.readAsDataURL(file);
     }
-  };
+  } else {
+    // Si no hay archivo, limpiar
+    setEditImageFile(null);
+  }
+};
+
+// ===== FUNCIÓN PARA GUARDAR CAMBIOS =====
+/**
+ * Envía los cambios del producto al backend
+ * @param {Event} e - Evento del formulario
+ */
+const handleEditSubmit = async (e) => {
+  e.preventDefault();
+  setLoading(true);
+  setError("");
+
+  try {
+    const fData = new FormData();
+    
+    // Solo agregar campos que tengan valor (opcionales)
+    if (editFormData.nombre) fData.append("nombre", editFormData.nombre);
+    if (editFormData.descripcion) fData.append("descripcion", editFormData.descripcion);
+    if (editFormData.precio) fData.append("precio", editFormData.precio);
+    if (editFormData.stock) fData.append("stock", editFormData.stock);
+    if (editFormData.categoria) fData.append("categoria", editFormData.categoria);
+    if (editFormData.color) fData.append("color", editFormData.color);
+    if (editFormData.tamano) fData.append("tamano", editFormData.tamano);
+    if (editFormData.material) fData.append("material", editFormData.material);
+    
+    fData.append("activo", editFormData.activo.toString());
+    
+    // ✅ CORRECCIÓN IMPORTANTE: Solo enviar si hay un archivo NUEVO
+    if (editImageFile && editImageFile instanceof File) {
+      fData.append("imagen", editImageFile);
+      console.log("📸 Enviando nueva imagen:", editImageFile.name);
+    } else {
+      console.log("📸 Sin cambio de imagen (se mantendrá la actual)");
+    }
+
+    await apiUpdateProduct(editingProduct, fData);
+    
+    alert("Producto actualizado exitosamente");
+    
+    // Resetear formulario
+    setEditFormData({
+      nombre: "",
+      descripcion: "",
+      categoria: "",
+      precio: "",
+      color: "",
+      tamano: "",
+      material: "",
+      stock: "",
+      activo: true,
+    });
+    setEditImageFile(null);
+    setEditImagePreview("");
+    setShowEditModal(false);
+    setEditingProduct(null);
+    loadProducts();
+  } catch (err) {
+    console.error("Error actualizando producto:", err);
+    setError(err.message || "Error al actualizar el producto");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   // ✅ NUEVO: Función para iniciar edición de pedido personalizado
   const handleEditOrder = (order) => {
@@ -500,6 +630,24 @@ export default function AdminDashboard() {
                         </span>
                       </td>
                       <td style={{ padding: "16px 12px", textAlign: "right" }}>
+                        {/* Botón de Editar */}
+                        <button
+                          onClick={() => handleEditProduct(p)}
+                          style={{
+                            padding: "6px 12px",
+                            backgroundColor: "#ffc107",
+                            color: "#000",
+                            border: "none",
+                            borderRadius: "6px",
+                            cursor: "pointer",
+                            fontSize: "13px",
+                            fontWeight: "500",
+                            marginRight: "8px",
+                          }}
+                          aria-label={`Editar ${p.nombre}`}
+                        >
+                          ✏️ Editar
+                        </button>
                         <button
                           onClick={() => deleteProduct(p.id)}
                           style={{
@@ -1226,7 +1374,371 @@ export default function AdminDashboard() {
             </form>
           </div>
         </div>
+        
+
       )}
+      {/* ===== MODAL DE EDICIÓN DE PRODUCTO ===== */}
+      {showEditModal && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            backgroundColor: "rgba(0,0,0,0.5)",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 9999,
+            overflow: "auto",
+          }}
+          onClick={() => setShowEditModal(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="edit-modal-title"
+        >
+          <div
+            style={{
+              backgroundColor: "#fff",
+              padding: "30px",
+              borderRadius: "12px",
+              width: "90%",
+              maxWidth: "600px",
+              maxHeight: "90vh",
+              overflowY: "auto",
+              boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 id="edit-modal-title" style={{ marginBottom: "20px", color: "#333" }}>
+              ✏️ Editar Producto
+            </h2>
+            <p style={{ marginBottom: "20px", color: "#666", fontSize: "14px" }}>
+              Todos los campos son opcionales. Solo modifica los que desees actualizar.
+            </p>
+
+            {error && (
+              <div
+                style={{
+                  padding: "10px",
+                  backgroundColor: "#fee",
+                  color: "#c00",
+                  borderRadius: "6px",
+                  marginBottom: "15px",
+                }}
+                role="alert"
+              >
+                {error}
+              </div>
+            )}
+
+            <form onSubmit={handleEditSubmit}>
+              {/* Nombre del Producto */}
+              <div style={{ marginBottom: "15px" }}>
+                <label 
+                  htmlFor="edit-nombre"
+                  style={{ display: "block", marginBottom: "5px", fontWeight: "500" }}
+                >
+                  Nombre del Producto
+                </label>
+                <input
+                  id="edit-nombre"
+                  type="text"
+                  name="nombre"
+                  value={editFormData.nombre}
+                  onChange={handleEditChange}
+                  style={{
+                    width: "100%",
+                    padding: "10px",
+                    border: "1px solid #ddd",
+                    borderRadius: "6px",
+                    fontSize: "14px",
+                  }}
+                  placeholder="Opcional"
+                />
+              </div>
+
+              {/* Descripción */}
+              <div style={{ marginBottom: "15px" }}>
+                <label 
+                  htmlFor="edit-descripcion"
+                  style={{ display: "block", marginBottom: "5px", fontWeight: "500" }}
+                >
+                  Descripción
+                </label>
+                <textarea
+                  id="edit-descripcion"
+                  name="descripcion"
+                  value={editFormData.descripcion}
+                  onChange={handleEditChange}
+                  style={{
+                    width: "100%",
+                    padding: "10px",
+                    border: "1px solid #ddd",
+                    borderRadius: "6px",
+                    fontSize: "14px",
+                    minHeight: "80px",
+                  }}
+                  placeholder="Opcional"
+                />
+              </div>
+
+              {/* Categoría */}
+              <div style={{ marginBottom: "15px" }}>
+                <label 
+                  htmlFor="edit-categoria"
+                  style={{ display: "block", marginBottom: "5px", fontWeight: "500" }}
+                >
+                  Categoría
+                </label>
+                <select
+                  id="edit-categoria"
+                  name="categoria"
+                  value={editFormData.categoria}
+                  onChange={handleEditChange}
+                  style={{
+                    width: "100%",
+                    padding: "10px",
+                    border: "1px solid #ddd",
+                    borderRadius: "6px",
+                    fontSize: "14px",
+                  }}
+                >
+                  <option value="">Seleccionar categoría (opcional)</option>
+                  <option value="origami-3d">Origami 3D</option>
+                  <option value="filigrana">Filigrana</option>
+                  <option value="tradicional-pliegues">Tradicional/Pliegues</option>
+                </select>
+              </div>
+
+              {/* Precio y Stock */}
+              <div style={{ display: "flex", gap: "15px", marginBottom: "15px" }}>
+                <div style={{ flex: 1 }}>
+                  <label 
+                    htmlFor="edit-precio"
+                    style={{ display: "block", marginBottom: "5px", fontWeight: "500" }}
+                  >
+                    Precio ($)
+                  </label>
+                  <input
+                    id="edit-precio"
+                    type="number"
+                    name="precio"
+                    value={editFormData.precio}
+                    onChange={handleEditChange}
+                    min="0"
+                    step="0.01"
+                    style={{
+                      width: "100%",
+                      padding: "10px",
+                      border: "1px solid #ddd",
+                      borderRadius: "6px",
+                      fontSize: "14px",
+                    }}
+                    placeholder="Opcional"
+                  />
+                </div>
+
+                <div style={{ flex: 1 }}>
+                  <label 
+                    htmlFor="edit-stock"
+                    style={{ display: "block", marginBottom: "5px", fontWeight: "500" }}
+                  >
+                    Stock
+                  </label>
+                  <input
+                    id="edit-stock"
+                    type="number"
+                    name="stock"
+                    value={editFormData.stock}
+                    onChange={handleEditChange}
+                    min="0"
+                    style={{
+                      width: "100%",
+                      padding: "10px",
+                      border: "1px solid #ddd",
+                      borderRadius: "6px",
+                      fontSize: "14px",
+                    }}
+                    placeholder="Opcional"
+                  />
+                </div>
+              </div>
+
+              {/* Color */}
+              <div style={{ marginBottom: "15px" }}>
+                <label 
+                  htmlFor="edit-color"
+                  style={{ display: "block", marginBottom: "5px", fontWeight: "500" }}
+                >
+                  Color
+                </label>
+                <input
+                  id="edit-color"
+                  type="text"
+                  name="color"
+                  value={editFormData.color}
+                  onChange={handleEditChange}
+                  style={{
+                    width: "100%",
+                    padding: "10px",
+                    border: "1px solid #ddd",
+                    borderRadius: "6px",
+                    fontSize: "14px",
+                  }}
+                  placeholder="Opcional"
+                />
+              </div>
+
+              {/* Tamaño */}
+              <div style={{ marginBottom: "15px" }}>
+                <label 
+                  htmlFor="edit-tamano"
+                  style={{ display: "block", marginBottom: "5px", fontWeight: "500" }}
+                >
+                  Tamaño
+                </label>
+                <input
+                  id="edit-tamano"
+                  type="text"
+                  name="tamano"
+                  value={editFormData.tamano}
+                  onChange={handleEditChange}
+                  style={{
+                    width: "100%",
+                    padding: "10px",
+                    border: "1px solid #ddd",
+                    borderRadius: "6px",
+                    fontSize: "14px",
+                  }}
+                  placeholder="Opcional"
+                />
+              </div>
+
+              {/* Material */}
+              <div style={{ marginBottom: "15px" }}>
+                <label 
+                  htmlFor="edit-material"
+                  style={{ display: "block", marginBottom: "5px", fontWeight: "500" }}
+                >
+                  Material
+                </label>
+                <input
+                  id="edit-material"
+                  type="text"
+                  name="material"
+                  value={editFormData.material}
+                  onChange={handleEditChange}
+                  style={{
+                    width: "100%",
+                    padding: "10px",
+                    border: "1px solid #ddd",
+                    borderRadius: "6px",
+                    fontSize: "14px",
+                  }}
+                  placeholder="Opcional"
+                />
+              </div>
+
+              {/* Imagen */}
+              <div style={{ marginBottom: "15px" }}>
+                <label 
+                  htmlFor="edit-imagen"
+                  style={{ display: "block", marginBottom: "5px", fontWeight: "500" }}
+                >
+                  Imagen del Producto
+                </label>
+                <input
+                  id="edit-imagen"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleEditImageChange}
+                  style={{
+                    width: "100%",
+                    padding: "10px",
+                    border: "1px solid #ddd",
+                    borderRadius: "6px",
+                    fontSize: "14px",
+                  }}
+                />
+                {editImagePreview && (
+                  <div style={{ marginTop: "10px" }}>
+                    <img
+                      src={editImagePreview}
+                      alt="Vista previa del producto"
+                      style={{
+                        width: "100%",
+                        maxHeight: "200px",
+                        objectFit: "contain",
+                        borderRadius: "8px",
+                        border: "1px solid #ddd",
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Producto Activo */}
+              <div style={{ marginBottom: "20px" }}>
+                <label style={{ display: "flex", alignItems: "center", cursor: "pointer" }}>
+                  <input
+                    type="checkbox"
+                    name="activo"
+                    checked={editFormData.activo}
+                    onChange={handleEditChange}
+                    style={{ marginRight: "8px", cursor: "pointer" }}
+                  />
+                  <span style={{ fontWeight: "500" }}>Producto activo</span>
+                </label>
+              </div>
+
+              {/* Botones */}
+              <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEditModal(false);
+                    setEditingProduct(null);
+                    setError("");
+                  }}
+                  style={{
+                    padding: "10px 20px",
+                    backgroundColor: "#6c757d",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: "6px",
+                    cursor: "pointer",
+                    fontSize: "14px",
+                    fontWeight: "500",
+                  }}
+                  disabled={loading}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  style={{
+                    padding: "10px 20px",
+                    backgroundColor: "#007bff",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: "6px",
+                    cursor: loading ? "not-allowed" : "pointer",
+                    fontSize: "14px",
+                    fontWeight: "500",
+                    opacity: loading ? 0.7 : 1,
+                  }}
+                  disabled={loading}
+                >
+                  {loading ? "Guardando..." : "Guardar Cambios"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

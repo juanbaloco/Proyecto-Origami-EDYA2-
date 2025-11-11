@@ -154,18 +154,41 @@ export async function apiCreateProduct(data) {
 }
 
 export async function apiUpdateProduct(productId, productData) {
+  const token = getToken();
+  if (!token) throw new Error("No hay token");
+  
+  const headers = {
+    Authorization: `Bearer ${token}`,
+  };
+  
+  // No agregar Content-Type si es FormData
+  // El navegador lo agregará automáticamente con el boundary correcto
+  if (!(productData instanceof FormData)) {
+    headers["Content-Type"] = "application/json";
+  }
+  
+  console.log("📦 Actualizando producto:", productId);
+  
   const res = await fetch(`${API_BASE_URL}/productos/${productId}`, {
     method: "PUT",
-    headers: getHeaders(),
-    body: JSON.stringify(productData),
+    headers,
+    body: productData instanceof FormData ? productData : JSON.stringify(productData),
   });
-
+  
+  if (res.status === 401) {
+    clearToken();
+    throw new Error("Sesión expirada");
+  }
+  
   if (!res.ok) {
     const error = await res.json();
+    console.error("❌ Error del servidor:", error);
     throw new Error(extractErrorMessage(error) || "Failed to update product");
   }
-
-  return res.json();
+  
+  const result = await res.json();
+  console.log("✅ Producto actualizado exitosamente:", result);
+  return result;
 }
 
 export async function apiDeleteProduct(productId) {
