@@ -102,3 +102,10 @@ main.container { padding: 24px 0 64px; }
 
 .actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 12px; }
 .error { color: #c02626; }
+
+/* ESTILOS DEL CARRITO */
+.cart-page { max-width: 900px; margin: 40px auto; padding: 20px; }
+.cart-table { width: 100%; border-collapse: collapse; }
+.cart-table thead { background-color: #5a67d8; color: white; }
+.cart-total { text-align: right; padding: 20px; }
+/* ... (más estilos en el documento) */
