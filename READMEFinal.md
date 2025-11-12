@@ -111,6 +111,10 @@ python app/test_db.py  # Verifica conexión a SQLite y existencia del archivo de
 
 Puedes agregar pruebas de endpoints usando `pytest` + `httpx` en una próxima iteración.
 
+# Importante
+Es importante tener en cuenta que el comando para poder ejecutar el test es: npm run test
+de esta manera se correran las pruebas y se verificaran los aspectos a revisar.
+
 ---
 
 # Endpoints principales (ejemplos)
