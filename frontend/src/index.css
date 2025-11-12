@@ -102,3 +102,153 @@ main.container { padding: 24px 0 64px; }
 
 .actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 12px; }
 .error { color: #c02626; }
+
+/* ============================================
+🛒 ESTILOS DEL CARRITO
+============================================ */
+
+.cart-page {
+max-width: 900px;
+margin: 40px auto;
+padding: 20px;
+}
+
+.cart-page h1 {
+margin-bottom: 30px;
+color: #2d3748;
+font-size: 2rem;
+}
+
+.empty-cart {
+text-align: center;
+padding: 60px 20px;
+background-color: #f7fafc;
+border-radius: 12px;
+}
+
+.empty-cart p {
+font-size: 1.2rem;
+color: #718096;
+margin-bottom: 20px;
+}
+
+.empty-cart button {
+padding: 12px 24px;
+background-color: #5a67d8;
+color: white;
+border: none;
+border-radius: 8px;
+font-size: 16px;
+cursor: pointer;
+transition: background-color 0.3s;
+}
+
+.empty-cart button:hover {
+background-color: #4c51bf;
+}
+
+.cart-table {
+width: 100%;
+border-collapse: collapse;
+margin-bottom: 30px;
+background-color: white;
+border-radius: 8px;
+overflow: hidden;
+box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.cart-table thead {
+background-color: #5a67d8;
+color: white;
+}
+
+.cart-table th {
+padding: 16px;
+text-align: left;
+font-weight: 600;
+}
+
+.cart-table td {
+padding: 16px;
+border-bottom: 1px solid #e2e8f0;
+}
+
+.cart-table tbody tr:last-child td {
+border-bottom: none;
+}
+
+.cart-table tbody tr:hover {
+background-color: #f7fafc;
+}
+
+.cart-table button {
+padding: 6px 12px;
+background-color: #5a67d8;
+color: white;
+border: none;
+border-radius: 4px;
+cursor: pointer;
+font-size: 14px;
+transition: background-color 0.2s;
+margin: 0 2px;
+}
+
+.cart-table button:hover:not(:disabled) {
+background-color: #4c51bf;
+}
+
+.cart-table button:disabled {
+background-color: #cbd5e0;
+cursor: not-allowed;
+}
+
+.cart-table .btn-delete {
+background-color: #f56565;
+}
+
+.cart-table .btn-delete:hover {
+background-color: #e53e3e;
+}
+
+.cart-total {
+text-align: right;
+padding: 20px;
+background-color: #f7fafc;
+border-radius: 8px;
+}
+
+.cart-total h2 {
+color: #2d3748;
+margin-bottom: 15px;
+font-size: 1.5rem;
+}
+
+.checkout-btn {
+padding: 12px 24px;
+font-size: 16px;
+background-color: #5a67d8;
+color: white;
+border: none;
+border-radius: 8px;
+cursor: pointer;
+transition: background-color 0.3s;
+}
+
+.checkout-btn:hover {
+background-color: #4c51bf;
+}
+
+@media (max-width: 768px) {
+.cart-table {
+font-size: 14px;
+}
+
+.cart-table th,
+.cart-table td {
+padding: 10px 8px;
+}
+
+.cart-page {
+padding: 15px;
+}
+}

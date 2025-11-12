@@ -154,18 +154,41 @@ export async function apiCreateProduct(data) {
 }
 
 export async function apiUpdateProduct(productId, productData) {
+  const token = getToken();
+  if (!token) throw new Error("No hay token");
+  
+  const headers = {
+    Authorization: `Bearer ${token}`,
+  };
+  
+  // No agregar Content-Type si es FormData
+  // El navegador lo agregará automáticamente con el boundary correcto
+  if (!(productData instanceof FormData)) {
+    headers["Content-Type"] = "application/json";
+  }
+  
+  console.log("📦 Actualizando producto:", productId);
+  
   const res = await fetch(`${API_BASE_URL}/productos/${productId}`, {
     method: "PUT",
-    headers: getHeaders(),
-    body: JSON.stringify(productData),
+    headers,
+    body: productData instanceof FormData ? productData : JSON.stringify(productData),
   });
-
+  
+  if (res.status === 401) {
+    clearToken();
+    throw new Error("Sesión expirada");
+  }
+  
   if (!res.ok) {
     const error = await res.json();
+    console.error("❌ Error del servidor:", error);
     throw new Error(extractErrorMessage(error) || "Failed to update product");
   }
-
-  return res.json();
+  
+  const result = await res.json();
+  console.log("✅ Producto actualizado exitosamente:", result);
+  return result;
 }
 
 export async function apiDeleteProduct(productId) {
@@ -295,6 +318,72 @@ export async function apiGetLoyalty() {
   }
 
   return res.json();
+}
+
+// ============================================
+// FIDELIZADOS (ADMIN + CLIENT)
+// ============================================
+export async function apiGetFidelizados() {
+  const token = getToken();
+  const res = await fetch(`${API_BASE_URL}/fidelizacion`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(extractErrorMessage(error) || "Failed to fetch fidelizados");
+  }
+  return res.json();
+}
+
+export async function apiAcceptFidelizado(correo) {
+  const token = getToken();
+  const res = await fetch(`${API_BASE_URL}/fidelizacion/${encodeURIComponent(correo)}/accept`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(extractErrorMessage(error) || 'Failed to accept fidelizado');
+  }
+  return res.json();
+}
+
+export async function apiPayFidelizacion(correo) {
+  // Detectar entorno de desarrollo: hostname localhost/127.0.0.1 o NODE_ENV != 'production'
+  const isDev = (typeof window !== 'undefined' && window.location && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
+    || (typeof process !== 'undefined' && process.env && process.env.NODE_ENV !== 'production');
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/fidelizacion/${encodeURIComponent(correo)}/pagar`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    if (res.status === 404) {
+      // Endpoint no existe: simular sólo en desarrollo
+      const msg = `apiPayFidelizacion: endpoint not found (404) for ${correo}`;
+      if (isDev) {
+        console.warn(msg + ', returning simulated success (dev mode).');
+        return { simulated: true };
+      }
+      const error = await res.json().catch(() => ({ message: 'Not Found' }));
+      throw new Error(extractErrorMessage(error) || 'Not Found');
+    }
+
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({ message: 'Unknown error' }));
+      throw new Error(extractErrorMessage(error) || 'Failed to process fidelizacion payment');
+    }
+
+    return res.json();
+  } catch (err) {
+    // Si fallo de red o CORS: en dev permitimos simulación, en producción relanzar el error
+    if (isDev) {
+      console.warn('apiPayFidelizacion: request failed, returning simulated success (dev). Error:', err);
+      return { simulated: true };
+    }
+    throw err;
+  }
 }
 
 // ============================================
