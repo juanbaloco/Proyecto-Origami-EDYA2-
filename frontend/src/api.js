@@ -321,6 +321,46 @@ export async function apiGetLoyalty() {
 }
 
 // ============================================
+// FIDELIZADOS (ADMIN + CLIENT)
+// ============================================
+export async function apiGetFidelizados() {
+  const token = getToken();
+  const res = await fetch(`${API_BASE_URL}/fidelizacion`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(extractErrorMessage(error) || "Failed to fetch fidelizados");
+  }
+  return res.json();
+}
+
+export async function apiAcceptFidelizado(correo) {
+  const token = getToken();
+  const res = await fetch(`${API_BASE_URL}/fidelizacion/${encodeURIComponent(correo)}/accept`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(extractErrorMessage(error) || 'Failed to accept fidelizado');
+  }
+  return res.json();
+}
+
+export async function apiPayFidelizacion(correo) {
+  const res = await fetch(`${API_BASE_URL}/fidelizacion/${encodeURIComponent(correo)}/pagar`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(extractErrorMessage(error) || 'Failed to process fidelizacion payment');
+  }
+  return res.json();
+}
+
+// ============================================
 // CATEGORIES
 // ============================================
 export async function apiGetCategories() {

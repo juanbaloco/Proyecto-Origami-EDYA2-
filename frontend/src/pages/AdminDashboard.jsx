@@ -68,11 +68,27 @@ export default function AdminDashboard() {
   const [editImageFile, setEditImageFile] = useState(null);
   const [editImagePreview, setEditImagePreview] = useState("");
   const [showEditModal, setShowEditModal] = useState(false);
+  
+  // ✅ Función auxiliar para construir URLs de imagen
+  const getImageUrl = (imagenUrl) => {
+    if (!imagenUrl) return null;
+    try {
+      const s = String(imagenUrl);
+      if (s.startsWith('http') || s.startsWith('data:')) return s;
+      return `http://localhost:8000${s}`;
+    } catch (e) {
+      return null;
+    }
+  };
+
   // ✅ Cargar pedidos normales
   useEffect(() => {
     if (tab === "pedidos") {
       apiGetPedidosNormales()
-        .then((d) => setOrders(d))
+        .then((d) => {
+          console.log("Pedidos Normales recibidos:", d);
+          setOrders(d);
+        })
         .catch((e) => console.error(e));
     }
   }, [tab]);
@@ -81,8 +97,22 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (tab === "personalizados") {
       apiGetPedidosPersonalizados()
-        .then((d) => setOrders(d))
+        .then((d) => {
+          console.log("Pedidos Personalizados recibidos:", d);
+          setOrders(d);
+        })
         .catch((e) => console.error(e));
+    }
+  }, [tab]);
+
+  // ✅ Cargar lista de fidelizados (admin)
+  const [fidelizados, setFidelizados] = useState([]);
+  useEffect(() => {
+    if (tab === 'fidelizados') {
+      // lazy-load
+      import('../api').then(({ apiGetFidelizados }) => {
+        apiGetFidelizados().then(setFidelizados).catch((e) => console.error(e));
+      });
     }
   }, [tab]);
 
@@ -179,7 +209,7 @@ export default function AdminDashboard() {
     }
     apiUpdateOrderStatus(orderId, newStatus, comentario)
       .then(() => {
-        setOrders(prev => prev.filter(o => o.id !== orderId));
+        setOrders(prev => prev.filter(o => o.pedido_id !== orderId));
         alert("Pedido cancelado y eliminado del panel.");
       })
       .catch((e) => {
@@ -190,7 +220,7 @@ export default function AdminDashboard() {
     apiUpdateOrderStatus(orderId, newStatus)
       .then(() => {
         setOrders(prev => prev.map(o =>
-          o.id === orderId ? { ...o, estado: newStatus } : o
+          o.pedido_id === orderId ? { ...o, estado: newStatus } : o
         ));
         alert(`Pedido actualizado a: ${newStatus}`);
       })
@@ -338,7 +368,7 @@ const handleEditSubmit = async (e) => {
 
   // ✅ NUEVO: Función para iniciar edición de pedido personalizado
   const handleEditOrder = (order) => {
-    setEditingOrder(order.id);
+    setEditingOrder(order.pedido_id);
     setEditData({
       nombre_personalizado: order.nombre_personalizado || "",
       precio_personalizado: order.precio_personalizado || "",
@@ -397,6 +427,23 @@ const handleEditSubmit = async (e) => {
         </button>
       </div>
 
+      {/* Nuevo tab: Fidelizados */}
+      <button
+        onClick={() => setTab('fidelizados')}
+        style={{
+          marginLeft: 12,
+          padding: "12px 24px",
+          background: tab === 'fidelizados' ? "#3b82f6" : "transparent",
+          color: tab === 'fidelizados' ? "white" : "#6b7280",
+          border: 'none',
+          cursor: 'pointer',
+          fontSize: 15,
+          fontWeight: tab === 'fidelizados' ? 600 : 500,
+        }}
+      >
+        Fidelizados
+      </button>
+
       {/* Tabs */}
       <div style={{ display: "flex", gap: "10px", marginBottom: "30px", borderBottom: "2px solid #e5e7eb" }}>
         {["productos", "pedidos", "personalizados"].map((t) => (
@@ -423,6 +470,47 @@ const handleEditSubmit = async (e) => {
           </button>
         ))}
       </div>
+
+      {/* Tab de Fidelizados (Admin) */}
+      {tab === 'fidelizados' && (
+        <div style={{ background: 'white', borderRadius: 12, border: '1px solid #e5e7eb', padding: 20 }}>
+          <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 12 }}>Clientes Fidelizados</h2>
+          {fidelizados.length === 0 ? (
+            <div style={{ padding: '1rem', textAlign: 'center' }}>No hay clientes fidelizados</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {fidelizados.map((f) => (
+                <div key={f.id} style={{ border: '1px solid #e5e7eb', padding: 12, borderRadius: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontWeight: 600 }}>{f.nombre_completo} <small style={{ color: '#6b7280' }}>({f.correo})</small></div>
+                    <div style={{ fontSize: 13, color: '#374151' }}>Puntos: {f.puntos} {f.proximo_regalo ? `| Estado: ${f.proximo_regalo}` : ''}</div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <button
+                      onClick={async () => {
+                        try {
+                          const api = await import('../api');
+                          await api.apiAcceptFidelizado(f.correo);
+                          // refresh list
+                          const refreshed = await api.apiGetFidelizados();
+                          setFidelizados(refreshed);
+                          alert('Cliente aceptado en el programa');
+                        } catch (err) {
+                          console.error(err);
+                          alert('Error al aceptar cliente');
+                        }
+                      }}
+                      style={{ padding: '8px 12px', background: '#3b82f6', color: 'white', border: 'none', borderRadius: 6, cursor: 'pointer' }}
+                    >
+                      Aceptar
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Tab de Productos */}
       {tab === "productos" && (
@@ -557,7 +645,7 @@ const handleEditSubmit = async (e) => {
                         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                           {p.imagen_url && (
                             <img
-                              src={p.imagen_url}
+                              src={getImageUrl(p.imagen_url)}
                               alt={p.nombre}
                               style={{
                                 width: "50px",
@@ -688,72 +776,137 @@ const handleEditSubmit = async (e) => {
             Pedidos Normales
           </h2>
           {regularOrders.length === 0 ? (
-            <p style={{ textAlign: "center", color: "#9ca3af", padding: "40px" }}>
-              No hay pedidos normales
-            </p>
+            <div style={{ padding: "2rem", textAlign: "center" }}>No hay pedidos normales</div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-              {regularOrders.map((o) => (
-                <div
-                  key={o.id}
-                  style={{
-                    border: "1px solid #e5e7eb",
-                    borderRadius: "8px",
-                    padding: "16px",
-                    background: "#fafafa",
-                  }}
-                >
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "12px" }}>
-                    <strong style={{ fontSize: "15px" }}>Pedido #{o.id}</strong>
-                    <span
-                      style={{
-                        background:
-                          o.estado === "completado"
-                            ? "#d1fae5"
-                            : o.estado === "cancelado"
-                            ? "#fee2e2"
-                            : "#fef3c7",
-                        color:
-                          o.estado === "completado"
-                            ? "#065f46"
-                            : o.estado === "cancelado"
-                            ? "#991b1b"
-                            : "#92400e",
-                        padding: "4px 12px",
-                        borderRadius: "6px",
-                        fontSize: "13px",
-                        fontWeight: "500",
-                      }}
-                    >
-                      {o.estado}
-                    </span>
-                  </div>
-                  <p style={{ margin: "8px 0", fontSize: "14px" }}>
-                    <strong>Contacto:</strong> {o.contacto_nombre} | {o.contacto_email}
-                  </p>
-                  <div style={{ marginTop: "12px" }}>
-                    <label style={{ fontSize: "13px", fontWeight: "500", marginRight: "8px" }}>
-                      Cambiar estado:
-                    </label>
-                    <select
-                      value={o.estado}
-                      onChange={(e) => changeStatus(o.id, e.target.value)}
-                      style={{
-                        padding: "6px 12px",
-                        border: "1px solid #d1d5db",
-                        borderRadius: "6px",
-                        fontSize: "14px",
-                      }}
-                    >
-                      <option value="pendiente">Pendiente</option>
-                      <option value="en_proceso">En Proceso</option>
-                      <option value="completado">Completado</option>
-                      <option value="cancelado">Cancelado</option>
-                    </select>
+            regularOrders.map((o) => (
+              <div
+                key={o.pedido_id}
+                style={{
+                  border: "1px solid #e5e7eb",
+                  borderRadius: "8px",
+                  padding: "16px",
+                  background: "#fafafa",
+                  marginBottom: "16px",
+                }}
+              >
+                {/* ENCABEZADO CON IMAGEN Y NOMBRE */}
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "12px", alignItems: "flex-start" }}>
+                  <div style={{ display: "flex", gap: "12px", alignItems: "center", flex: 1 }}>
+                    {/* IMAGEN DEL PRIMER PRODUCTO */}
+                    {o.items && o.items.length > 0 && (o.items[0]?.imagen_url || o.items[0]?.imagen) && (
+                      <img
+                        src={getImageUrl(o.items[0]?.imagen_url || o.items[0]?.imagen)}
+                        alt={o.items[0]?.nombre || "Producto"}
+                        style={{
+                          width: "60px",
+                          height: "60px",
+                          objectFit: "cover",
+                          borderRadius: "6px",
+                          border: "1px solid #ddd",
+                          flexShrink: 0,
+                        }}
+                        onError={(e) => { e.target.style.display = "none"; }}
+                      />
+                    )}
+                    {/* NOMBRE DEL PRODUCTO */}
+                    <div style={{ flex: 1 }}>
+                      <strong style={{ fontSize: "15px", display: "block", marginBottom: "4px" }}>
+                        {o.items && o.items.length > 0
+                          ? o.items.map(item => `${item.nombre}${item.cantidad > 1 ? ` x${item.cantidad}` : ""}`).join(", ")
+                          : `Pedido #${o.pedido_id.substring(0, 8)}`
+                        }
+                      </strong>
+                      <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                        <span
+                          style={{
+                            background:
+                              o.estado === "completado" ? "#d1fae5" :
+                              o.estado === "cancelado" ? "#fee2e2" : "#fef3c7",
+                            color:
+                              o.estado === "completado" ? "#065f46" :
+                              o.estado === "cancelado" ? "#991b1b" : "#92400e",
+                            padding: "4px 12px",
+                            borderRadius: "6px",
+                            fontSize: "13px",
+                            fontWeight: "500",
+                          }}
+                        >
+                          {o.estado}
+                        </span>
+                        <span style={{ fontSize: "15px", fontWeight: "600", color: "#059669" }}>
+                          ${o.total || 0}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              ))}
-            </div>
+
+                {/* CONTACTO */}
+                <div style={{ 
+                  marginBottom: "12px", 
+                  padding: "12px", 
+                  background: "#f0f9ff", 
+                  borderRadius: "6px" 
+                }}>
+                  <div style={{ fontSize: "14px", fontWeight: "600", marginBottom: "8px" }}>
+                    📞 Contacto
+                  </div>
+                  <div style={{ fontSize: "13px", color: "#374151" }}>
+                    <div style={{ marginBottom: "4px" }}>
+                      <strong>Nombre:</strong> {o.contacto?.nombre || o.contacto_nombre || "N/A"}
+                    </div>
+                    <div style={{ marginBottom: "4px" }}>
+                      <strong>Email:</strong> {o.contacto?.email || o.contacto_email || "N/A"}
+                    </div>
+                    <div>
+                      <strong>Teléfono:</strong> {o.contacto?.telefono || o.contacto_telefono || "N/A"}
+                    </div>
+                  </div>
+                </div>
+
+                {/* ENTREGA */}
+                <div style={{ 
+                  marginBottom: "12px", 
+                  padding: "12px", 
+                  background: "#f0fdf4", 
+                  borderRadius: "6px" 
+                }}>
+                  <div style={{ fontSize: "14px", fontWeight: "600", marginBottom: "8px" }}>
+                    🚚 Entrega
+                  </div>
+                  <div style={{ fontSize: "13px", color: "#374151" }}>
+                    <div style={{ marginBottom: "4px" }}>
+                      <strong>Dirección:</strong> {o.direccion || "No especificada"}
+                    </div>
+                    <div>
+                      <strong>Método de Pago:</strong> {o.metodo_pago || "No especificado"}
+                    </div>
+                  </div>
+                </div>
+
+                {/* CAMBIAR ESTADO */}
+                <div style={{ marginTop: "12px" }}>
+                  <label style={{ fontSize: "13px", fontWeight: "500", marginRight: "8px" }}>
+                    Cambiar estado
+                  </label>
+                  <select
+                    value={o.estado}
+                    onChange={(e) => changeStatus(o.pedido_id, e.target.value)}
+                    style={{
+                      padding: "6px 12px",
+                      border: "1px solid #d1d5db",
+                      borderRadius: "6px",
+                      fontSize: "14px",
+                    }}
+                  >
+                    <option value="pendiente">Pendiente</option>
+                    <option value="en_proceso">En Proceso</option>
+                    <option value="completado">Completado</option>
+                    <option value="cancelado">Cancelado</option>
+                  </select>
+                </div>
+              </div>
+            ))
           )}
         </div>
       )}
@@ -773,206 +926,196 @@ const handleEditSubmit = async (e) => {
             Pedidos Personalizados
           </h2>
           {customOrders.length === 0 ? (
-            <p style={{ textAlign: "center", color: "#9ca3af", padding: "40px" }}>
-              No hay pedidos personalizados
-            </p>
+            <div style={{ padding: "2rem", textAlign: "center" }}>No hay pedidos personalizados</div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-              {customOrders.map((o) => (
-                <div
-                  key={o.id}
-                  style={{
-                    border: "1px solid #e5e7eb",
-                    borderRadius: "8px",
-                    padding: "16px",
-                    background: "#fafafa",
-                  }}
-                >
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "12px" }}>
-                    <strong style={{ fontSize: "15px" }}>Pedido #{o.id}</strong>
-                    <span
-                      style={{
-                        background:
-                          o.estado === "completado"
-                            ? "#d1fae5"
-                            : o.estado === "cancelado"
-                            ? "#fee2e2"
-                            : "#fef3c7",
-                        color:
-                          o.estado === "completado"
-                            ? "#065f46"
-                            : o.estado === "cancelado"
-                            ? "#991b1b"
-                            : "#92400e",
-                        padding: "4px 12px",
-                        borderRadius: "6px",
-                        fontSize: "13px",
-                        fontWeight: "500",
-                      }}
-                    >
-                      {o.estado}
-                    </span>
-                  </div>
-
-                  <p style={{ margin: "8px 0", fontSize: "14px" }}>
-                    <strong>Contacto:</strong> {o.contacto_nombre} | {o.contacto_email}
-                  </p>
-                  <p style={{ margin: "8px 0", fontSize: "14px" }}>
-                    <strong>Descripción:</strong> {o.descripcion}
-                  </p>
-
-                  {/* ✅ SECCIÓN EDITABLE */}
-                  {editingOrder === o.id ? (
-                    <div
-                      style={{
-                        marginTop: "16px",
-                        padding: "16px",
-                        background: "#f0f9ff",
-                        borderRadius: "8px",
-                        border: "1px solid #bfdbfe",
-                      }}
-                    >
-                      <h4 style={{ marginTop: 0, fontSize: "14px", fontWeight: "600" }}>
-                        Editar Información Personalizada
-                      </h4>
-
-                      <div style={{ marginBottom: "12px" }}>
-                        <label style={{ display: "block", fontSize: "13px", fontWeight: "500", marginBottom: "4px" }}>
-                          Nombre del producto:
-                        </label>
-                        <input
-                          type="text"
-                          value={editData.nombre_personalizado}
-                          onChange={(e) =>
-                            setEditData({ ...editData, nombre_personalizado: e.target.value })
-                          }
-                          style={{
-                            width: "100%",
-                            padding: "8px 12px",
-                            border: "1px solid #d1d5db",
-                            borderRadius: "6px",
-                            fontSize: "14px",
-                          }}
-                          placeholder="Ej: Grulla de Papel Azul"
-                        />
-                      </div>
-
-                      <div style={{ marginBottom: "12px" }}>
-                        <label style={{ display: "block", fontSize: "13px", fontWeight: "500", marginBottom: "4px" }}>
-                          Precio personalizado ($):
-                        </label>
-                        <input
-                          type="number"
-                          value={editData.precio_personalizado}
-                          onChange={(e) =>
-                            setEditData({ ...editData, precio_personalizado: e.target.value })
-                          }
-                          style={{
-                            width: "100%",
-                            padding: "8px 12px",
-                            border: "1px solid #d1d5db",
-                            borderRadius: "6px",
-                            fontSize: "14px",
-                          }}
-                          placeholder="Ej: 25.00"
-                        />
-                      </div>
-
-                      <div style={{ marginBottom: "12px" }}>
-                        <label style={{ display: "block", fontSize: "13px", fontWeight: "500", marginBottom: "4px" }}>
-                          Comentario del vendedor:
-                        </label>
-                        <textarea
-                          value={editData.comentario_vendedor}
-                          onChange={(e) =>
-                            setEditData({ ...editData, comentario_vendedor: e.target.value })
-                          }
-                          style={{
-                            width: "100%",
-                            padding: "8px 12px",
-                            border: "1px solid #d1d5db",
-                            borderRadius: "6px",
-                            fontSize: "14px",
-                            minHeight: "80px",
-                            resize: "vertical",
-                          }}
-                          placeholder="Notas internas sobre el pedido..."
-                        />
-                      </div>
-
-                      <div style={{ display: "flex", gap: "8px" }}>
-                        <button
-                          onClick={() => handleSaveCustomOrder(o.id)}
-                          style={{
-                            padding: "8px 16px",
-                            background: "#10b981",
-                            color: "white",
-                            border: "none",
-                            borderRadius: "6px",
-                            cursor: "pointer",
-                            fontSize: "14px",
-                            fontWeight: "500",
-                          }}
-                        >
-                          Guardar
-                        </button>
-                        <button
-                          onClick={() => setEditingOrder(null)}
-                          style={{
-                            padding: "8px 16px",
-                            background: "#e5e7eb",
-                            color: "#374151",
-                            border: "none",
-                            borderRadius: "6px",
-                            cursor: "pointer",
-                            fontSize: "14px",
-                            fontWeight: "500",
-                          }}
-                        >
-                          Cancelar
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      {/* ✅ MOSTRAR INFORMACIÓN GUARDADA */}
-                      {(o.nombre_personalizado || o.precio_personalizado || o.comentario_vendedor) && (
-                        <div
-                          style={{
-                            marginTop: "12px",
-                            padding: "12px",
-                            background: "#f0fdf4",
-                            borderRadius: "6px",
-                            border: "1px solid #bbf7d0",
-                          }}
-                        >
-                          <h4 style={{ marginTop: 0, fontSize: "13px", fontWeight: "600", color: "#065f46" }}>
-                            Información Personalizada
-                          </h4>
-                          {o.nombre_personalizado && (
-                            <p style={{ margin: "4px 0", fontSize: "13px" }}>
-                              <strong>Producto:</strong> {o.nombre_personalizado}
-                            </p>
-                          )}
-                          {o.precio_personalizado && (
-                            <p style={{ margin: "4px 0", fontSize: "13px" }}>
-                              <strong>Precio:</strong> ${o.precio_personalizado}
-                            </p>
-                          )}
-                          {o.comentario_vendedor && (
-                            <p style={{ margin: "4px 0", fontSize: "13px" }}>
-                              <strong>Comentario:</strong> {o.comentario_vendedor}
-                            </p>
-                          )}
-                        </div>
-                      )}
-
-                      <button
-                        onClick={() => handleEditOrder(o)}
+            customOrders.map((o) => (
+              <div
+                key={o.pedido_id}
+                style={{
+                  border: "1px solid #e5e7eb",
+                  borderRadius: "8px",
+                  padding: "16px",
+                  background: "#fafafa",
+                  marginBottom: "16px",
+                }}
+              >
+                {/* ENCABEZADO */}
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "12px", alignItems: "flex-start" }}>
+                  <div style={{ flex: 1 }}>
+                    <strong style={{ fontSize: "15px", display: "block", marginBottom: "4px" }}>
+                      {o.nombre_personalizado || "Pedido Personalizado"}
+                    </strong>
+                    <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                      <span
                         style={{
-                          marginTop: "12px",
+                          background:
+                            o.estado === "completado" ? "#d1fae5" :
+                            o.estado === "cancelado" ? "#fee2e2" : "#fef3c7",
+                          color:
+                            o.estado === "completado" ? "#065f46" :
+                            o.estado === "cancelado" ? "#991b1b" : "#92400e",
+                          padding: "4px 12px",
+                          borderRadius: "6px",
+                          fontSize: "13px",
+                          fontWeight: "500",
+                        }}
+                      >
+                        {o.estado}
+                      </span>
+                      <span style={{ fontSize: "15px", fontWeight: "600", color: "#059669" }}>
+                        ${o.precio_personalizado || 0}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* SOLICITUD */}
+                <div style={{ 
+                  marginBottom: "12px", 
+                  padding: "12px", 
+                  background: "#faf5ff", 
+                  borderRadius: "6px" 
+                }}>
+                  <div style={{ fontSize: "14px", fontWeight: "600", marginBottom: "8px" }}>
+                    📋 Descripción
+                  </div>
+                  <p style={{ margin: "0", fontSize: "13px", color: "#374151" }}>
+                    {o.descripcion || "Sin descripción"}
+                  </p>
+                  {/* IMAGEN DE REFERENCIA */}
+                  {o.imagen_referencia && (
+                    <div style={{ marginTop: "8px" }}>
+                      <img
+                        src={getImageUrl(o.imagen_referencia)}
+                        alt="Referencia"
+                        style={{
+                          maxWidth: "150px",
+                          borderRadius: "6px",
+                          border: "1px solid #ddd",
+                        }}
+                        onError={(e) => { e.target.style.display = "none"; }}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* CONTACTO */}
+                <div style={{ 
+                  marginBottom: "12px", 
+                  padding: "12px", 
+                  background: "#f0f9ff", 
+                  borderRadius: "6px" 
+                }}>
+                  <div style={{ fontSize: "14px", fontWeight: "600", marginBottom: "8px" }}>
+                    📞 Contacto
+                  </div>
+                  <div style={{ fontSize: "13px", color: "#374151" }}>
+                    <div style={{ marginBottom: "4px" }}>
+                      <strong>Nombre:</strong> {o.contacto?.nombre || o.contacto_nombre || "N/A"}
+                    </div>
+                    <div style={{ marginBottom: "4px" }}>
+                      <strong>Email:</strong> {o.contacto?.email || o.contacto_email || "N/A"}
+                    </div>
+                    <div>
+                      <strong>Teléfono:</strong> {o.contacto?.telefono || o.contacto_telefono || "N/A"}
+                    </div>
+                  </div>
+                </div>
+
+                {/* ENTREGA */}
+                <div style={{ 
+                  marginBottom: "12px", 
+                  padding: "12px", 
+                  background: "#f0fdf4", 
+                  borderRadius: "6px" 
+                }}>
+                  <div style={{ fontSize: "14px", fontWeight: "600", marginBottom: "8px" }}>
+                    🚚 Entrega
+                  </div>
+                  <div style={{ fontSize: "13px", color: "#374151" }}>
+                    <div style={{ marginBottom: "4px" }}>
+                      <strong>Dirección:</strong> {o.direccion || "No especificada"}
+                    </div>
+                    <div>
+                      <strong>Método de Pago:</strong> {o.metodo_pago || "No especificado"}
+                    </div>
+                  </div>
+                </div>
+
+                {/* SECCIÓN EDITABLE */}
+                {editingOrder === o.pedido_id ? (
+                  <div style={{
+                    marginTop: "12px",
+                    marginBottom: "12px",
+                    padding: "12px",
+                    background: "#f0f9ff",
+                    borderRadius: "6px",
+                    border: "1px solid #bfdbfe",
+                  }}>
+                    <div style={{ fontSize: "14px", fontWeight: "600", marginBottom: "8px" }}>
+                      ✏️ Editar Información
+                    </div>
+                    <div style={{ marginBottom: "8px" }}>
+                      <label style={{ display: "block", fontSize: "13px", fontWeight: "500", marginBottom: "4px" }}>
+                        Nombre del producto
+                      </label>
+                      <input
+                        type="text"
+                        value={editData.nombre_personalizado}
+                        onChange={(e) => setEditData({ ...editData, nombre_personalizado: e.target.value })}
+                        style={{
+                          width: "100%",
+                          padding: "8px 12px",
+                          border: "1px solid #d1d5db",
+                          borderRadius: "6px",
+                          fontSize: "14px",
+                        }}
+                        placeholder="Nombre del producto"
+                      />
+                    </div>
+                    <div style={{ marginBottom: "8px" }}>
+                      <label style={{ display: "block", fontSize: "13px", fontWeight: "500", marginBottom: "4px" }}>
+                        Precio personalizado
+                      </label>
+                      <input
+                        type="number"
+                        value={editData.precio_personalizado}
+                        onChange={(e) => setEditData({ ...editData, precio_personalizado: e.target.value })}
+                        style={{
+                          width: "100%",
+                          padding: "8px 12px",
+                          border: "1px solid #d1d5db",
+                          borderRadius: "6px",
+                          fontSize: "14px",
+                        }}
+                        placeholder="0.00"
+                      />
+                    </div>
+                    <div style={{ marginBottom: "8px" }}>
+                      <label style={{ display: "block", fontSize: "13px", fontWeight: "500", marginBottom: "4px" }}>
+                        Comentario del vendedor
+                      </label>
+                      <textarea
+                        value={editData.comentario_vendedor}
+                        onChange={(e) => setEditData({ ...editData, comentario_vendedor: e.target.value })}
+                        style={{
+                          width: "100%",
+                          padding: "8px 12px",
+                          border: "1px solid #d1d5db",
+                          borderRadius: "6px",
+                          fontSize: "14px",
+                          minHeight: "60px",
+                          resize: "vertical",
+                        }}
+                        placeholder="Notas..."
+                      />
+                    </div>
+                    <div style={{ display: "flex", gap: "8px" }}>
+                      <button
+                        onClick={() => handleSaveCustomOrder(o.pedido_id)}
+                        style={{
                           padding: "8px 16px",
-                          background: "#3b82f6",
+                          background: "#10b981",
                           color: "white",
                           border: "none",
                           borderRadius: "6px",
@@ -981,35 +1124,92 @@ const handleEditSubmit = async (e) => {
                           fontWeight: "500",
                         }}
                       >
-                        Editar Información
+                        Guardar
                       </button>
-                    </>
-                  )}
-
-                  {/* ✅ CAMBIAR ESTADO */}
-                  <div style={{ marginTop: "12px" }}>
-                    <label style={{ fontSize: "13px", fontWeight: "500", marginRight: "8px" }}>
-                      Cambiar estado:
-                    </label>
-                    <select
-                      value={o.estado}
-                      onChange={(e) => changeStatus(o.id, e.target.value)}
-                      style={{
-                        padding: "6px 12px",
-                        border: "1px solid #d1d5db",
+                      <button
+                        onClick={() => setEditingOrder(null)}
+                        style={{
+                          padding: "8px 16px",
+                          background: "#e5e7eb",
+                          color: "#374151",
+                          border: "none",
+                          borderRadius: "6px",
+                          cursor: "pointer",
+                          fontSize: "14px",
+                          fontWeight: "500",
+                        }}
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    {/* MOSTRAR INFORMACIÓN GUARDADA */}
+                    {(o.nombre_personalizado || o.precio_personalizado || o.comentario_vendedor) && (
+                      <div style={{
+                        marginBottom: "12px",
+                        padding: "12px",
+                        background: "#fef5e7",
                         borderRadius: "6px",
+                        border: "1px solid #fde68a",
+                      }}>
+                        <div style={{ fontSize: "14px", fontWeight: "600", marginBottom: "8px", color: "#92400e" }}>
+                          💬 Respuesta del Vendedor
+                        </div>
+                        {o.precio_personalizado && (
+                          <p style={{ margin: "4px 0", fontSize: "13px" }}>
+                            <strong>Precio:</strong> ${o.precio_personalizado}
+                          </p>
+                        )}
+                        {o.comentario_vendedor && (
+                          <p style={{ margin: "4px 0", fontSize: "13px" }}>
+                            <strong>Comentario:</strong> {o.comentario_vendedor}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                    <button
+                      onClick={() => handleEditOrder(o)}
+                      style={{
+                        padding: "8px 16px",
+                        background: "#3b82f6",
+                        color: "white",
+                        border: "none",
+                        borderRadius: "6px",
+                        cursor: "pointer",
                         fontSize: "14px",
+                        fontWeight: "500",
                       }}
                     >
-                      <option value="pendiente">Pendiente</option>
-                      <option value="en_proceso">En Proceso</option>
-                      <option value="completado">Completado</option>
-                      <option value="cancelado">Cancelado</option>
-                    </select>
-                  </div>
+                      Editar Información
+                    </button>
+                  </>
+                )}
+
+                {/* CAMBIAR ESTADO */}
+                <div style={{ marginTop: "12px" }}>
+                  <label style={{ fontSize: "13px", fontWeight: "500", marginRight: "8px" }}>
+                    Cambiar estado
+                  </label>
+                  <select
+                    value={o.estado}
+                    onChange={(e) => changeStatus(o.pedido_id, e.target.value)}
+                    style={{
+                      padding: "6px 12px",
+                      border: "1px solid #d1d5db",
+                      borderRadius: "6px",
+                      fontSize: "14px",
+                    }}
+                  >
+                    <option value="pendiente">Pendiente</option>
+                    <option value="en_proceso">En Proceso</option>
+                    <option value="completado">Completado</option>
+                    <option value="cancelado">Cancelado</option>
+                  </select>
                 </div>
-              ))}
-            </div>
+              </div>
+            ))
           )}
         </div>
       )}
@@ -1309,7 +1509,7 @@ const handleEditSubmit = async (e) => {
                 />
                 {imagePreview && (
                   <img
-                    src={imagePreview}
+                    src={getImageUrl(imagePreview)}
                     alt="Preview"
                     style={{
                       marginTop: "12px",
@@ -1665,7 +1865,7 @@ const handleEditSubmit = async (e) => {
                 {editImagePreview && (
                   <div style={{ marginTop: "10px" }}>
                     <img
-                      src={editImagePreview}
+                      src={getImageUrl(editImagePreview)}
                       alt="Vista previa del producto"
                       style={{
                         width: "100%",

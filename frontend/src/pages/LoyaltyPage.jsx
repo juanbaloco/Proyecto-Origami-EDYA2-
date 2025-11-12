@@ -1,20 +1,64 @@
-import { useState } from "react";
+import { useState, useContext } from "react";
+import { useNavigate } from "react-router-dom";
+import { AuthContext } from "../App";
+import { useCart } from "../contexts/CartContext";
+import { apiPayFidelizacion } from "../api";
 
 export default function LoyaltyPage() {
   const [showModal, setShowModal] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("Tarjeta");
   const [form, setForm] = useState({ nombre: "", email: "", telefono: "" });
+  const [loading, setLoading] = useState(false);
+  const [accepted, setAccepted] = useState(false);
+  const nav = useNavigate();
+  const { user } = useContext(AuthContext);
+  const { applyFidelizacionDiscount } = useCart();
 
   function handleSubscribe() {
     setShowModal(true);
   }
 
-  function handleConfirm() {
-    alert(
-      `Suscripción confirmada con método: ${paymentMethod}\nNombre: ${form.nombre}\nEmail: ${form.email}`
-    );
-    setShowModal(false);
-    setForm({ nombre: "", email: "", telefono: "" });
+  async function handleConfirm() {
+    // Simular el pago llamando al endpoint backend. Usar email del usuario si está logueado.
+    const correo = user?.email || form.email;
+    if (!correo) return alert('Por favor ingresa tu correo o inicia sesión');
+
+    try {
+      setLoading(true);
+      // Intentamos llamar al backend; si no existe el endpoint (404) simulamos el pago localmente.
+      try {
+        const res = await apiPayFidelizacion(correo);
+        console.log('Pago fidelizacion respuesta (backend):', res);
+      } catch (errApi) {
+        const msg = (errApi && errApi.message) ? String(errApi.message) : '';
+        // Si el backend responde Not Found / 404, hacemos fallback simulado.
+        if (msg.includes('Not Found') || msg.includes('404') || msg.toLowerCase().includes('not found')) {
+          console.warn('Endpoint /fidelizacion/{correo}/pagar no encontrado en backend — usando simulación local');
+        } else {
+          // rethrow para ser capturado por el outer catch
+          throw errApi;
+        }
+      }
+
+      // aplicar descuento del 10% en el carrito (real o simulado)
+      applyFidelizacionDiscount(0.10);
+
+      // mostrar modal de aceptación y redirigir al catálogo
+      setAccepted(true);
+      setShowModal(false);
+    } catch (err) {
+      console.error('Error al procesar pago de fidelizacion', err);
+      alert('Ocurrió un error procesando el pago. Intenta de nuevo.');
+    } finally {
+      setLoading(false);
+      // limpiar formulario por seguridad
+      setForm({ nombre: "", email: "", telefono: "" });
+    }
+  }
+
+  function goToProducts() {
+    // redirigir al listado de productos
+    nav('/productos');
   }
 
   return (
@@ -180,19 +224,62 @@ export default function LoyaltyPage() {
               </button>
               <button
                 onClick={handleConfirm}
+                disabled={loading}
                 style={{
                   flex: 1,
                   padding: "0.75rem",
-                  background: "#667eea",
+                  background: "#3b82f6",
                   color: "white",
                   border: "none",
                   borderRadius: "8px",
-                  cursor: "pointer",
+                  cursor: loading ? 'wait' : 'pointer',
                   fontWeight: "600"
                 }}
               >
-                Confirmar
+                {loading ? 'Procesando...' : 'Confirmar'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal que aparece cuando la suscripción fue aceptada */}
+      {accepted && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0,0,0,0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999
+          }}
+        >
+          <div
+            style={{
+              background: "white",
+              borderRadius: "12px",
+              padding: "2rem",
+              maxWidth: "500px",
+              width: "90%",
+              textAlign: 'center'
+            }}
+          >
+            <h2 style={{ marginTop: 0 }}>🎉 ¡Usted ha sido aceptado!</h2>
+            <p>Se le aplicó un 10% de descuento en su carrito. ¡Gracias por unirse!</p>
+            <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
+              <button
+                onClick={() => setAccepted(false)}
+                style={{ flex: 1, padding: '0.75rem', borderRadius: 8, border: 'none', background: '#e0e0e0', cursor: 'pointer' }}
+              >Cerrar</button>
+              <button
+                onClick={goToProducts}
+                style={{ flex: 1, padding: '0.75rem', borderRadius: 8, border: 'none', background: '#3b82f6', color: 'white', cursor: 'pointer' }}
+              >Ir a productos</button>
             </div>
           </div>
         </div>

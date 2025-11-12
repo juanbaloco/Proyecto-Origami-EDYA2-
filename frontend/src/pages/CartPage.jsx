@@ -9,6 +9,9 @@ export default function CartPage() {
   const nav = useNavigate();
   const { items, setQty, remove, total } = useCart();
   const { user } = useContext(AuthContext);
+  const BASE_URL = "http://localhost:8000";
+  
+  // ✅ CORREGIDO - Modal no se abre automáticamente
   const [showCheckout, setShowCheckout] = useState(false);
 
   const onCheckout = () => {
@@ -17,57 +20,87 @@ export default function CartPage() {
   };
 
   return (
-    <div className="cart-page">
-      <h1>🛒 Carrito de Compras</h1>
+    <div style={{ maxWidth: "900px", margin: "auto", padding: "1rem" }}>
+      <h1 style={{ fontSize: "1.5rem", marginBottom: "1rem" }}>🛒 Carrito</h1>
 
       {items.length === 0 ? (
-        <div className="empty-cart">
+        <div style={{ textAlign: "center", padding: "2rem" }}>
           <p>Tu carrito está vacío</p>
-          <button onClick={() => nav("/products")}>Ver Productos</button>
+          <button
+            onClick={() => nav("/")}
+            style={{
+              marginTop: "1rem",
+              padding: "0.75rem 1.5rem",
+              background: "#3b82f6",
+              color: "white",
+              border: "none",
+              borderRadius: "6px",
+              cursor: "pointer"
+            }}
+          >
+            Ir a la tienda
+          </button>
         </div>
       ) : (
         <>
-          <table className="cart-table">
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
-              <tr>
-                <th>Producto</th>
-                <th>Precio</th>
-                <th>Cantidad</th>
-                <th>Subtotal</th>
-                <th>Acciones</th>
+              <tr style={{ borderBottom: "2px solid #ddd" }}>
+                <th style={{ padding: "0.75rem", textAlign: "left" }}>Producto</th>
+                <th style={{ padding: "0.75rem", textAlign: "center" }}>Precio</th>
+                <th style={{ padding: "0.75rem", textAlign: "center" }}>Cantidad</th>
+                <th style={{ padding: "0.75rem", textAlign: "center" }}>Subtotal</th>
+                <th style={{ padding: "0.75rem", textAlign: "center" }}>Acciones</th>
               </tr>
             </thead>
             <tbody>
               {items.map((it) => (
-                <tr key={it.producto_id}>
-                  <td>{it.nombre}</td>
-                  <td>${it.precio}</td>
-                  <td>
-                    <button
-                      onClick={() => setQty(it.producto_id, it.cantidad - 1)}
-                      disabled={it.cantidad <= 1}
-                    >
-                      -
-                    </button>
-                    <span style={{ margin: "0 10px" }}>{it.cantidad}</span>
-                    <button onClick={() => setQty(it.producto_id, it.cantidad + 1)}>
-                      +
-                    </button>
+                <tr key={it.producto_id} style={{ borderBottom: "1px solid #eee" }}>
+                  <td style={{ padding: "0.75rem" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                      {it.imagen_url && (
+                        <img
+                          src={it.imagen_url.startsWith('http') ? it.imagen_url : `${BASE_URL}${it.imagen_url}`}
+                          alt={it.nombre}
+                          style={{ width: "60px", height: "60px", objectFit: "cover", borderRadius: "8px", border: "1px solid #e5e7eb" }}
+                          onError={(e) => { e.target.style.display = 'none'; }}
+                        />
+                      )}
+                      <span>{it.nombre}</span>
+                    </div>
                   </td>
-                  <td>${(it.precio * it.cantidad).toFixed(2)}</td>
-                  <td>
+                  <td style={{ padding: "0.75rem", textAlign: "center" }}>${it.precio}</td>
+                  <td style={{ padding: "0.75rem", textAlign: "center" }}>
+                    <input
+                      type="number"
+                      min="1"
+                      value={it.cantidad}
+                      onChange={(e) => setQty(it.producto_id, parseInt(e.target.value) || 1)}
+                      style={{
+                        width: "60px",
+                        padding: "0.25rem",
+                        textAlign: "center",
+                        border: "1px solid #ddd",
+                        borderRadius: "4px"
+                      }}
+                    />
+                  </td>
+                  <td style={{ padding: "0.75rem", textAlign: "center", fontWeight: "600" }}>
+                    ${(it.precio * it.cantidad).toFixed(2)}
+                  </td>
+                  <td style={{ padding: "0.75rem", textAlign: "center" }}>
                     <button
                       onClick={() => remove(it.producto_id)}
                       style={{
-                        padding: "6px 12px",
-                        backgroundColor: "#f56565",
+                        padding: "0.5rem 1rem",
+                        background: "#f56565",
                         color: "white",
                         border: "none",
                         borderRadius: "4px",
-                        cursor: "pointer",
+                        cursor: "pointer"
                       }}
                     >
-                      🗑️ Eliminar
+                      Eliminar
                     </button>
                   </td>
                 </tr>
@@ -75,20 +108,29 @@ export default function CartPage() {
             </tbody>
           </table>
 
-          <div className="cart-total" style={{ marginTop: "20px", textAlign: "right" }}>
-            <h2>Total: ${total.toFixed(2)}</h2>
+          <div style={{
+            marginTop: "1.5rem",
+            padding: "1rem",
+            background: "#f7fafc",
+            borderRadius: "8px",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center"
+          }}>
+            <div>
+              <strong style={{ fontSize: "1.25rem" }}>Total: ${total.toFixed(2)}</strong>
+            </div>
             <button
               onClick={onCheckout}
-              className="checkout-btn"
               style={{
-                padding: "12px 24px",
-                fontSize: "16px",
-                backgroundColor: "#5a67d8",
+                padding: "0.75rem 2rem",
+                background: "#3b82f6",
                 color: "white",
                 border: "none",
                 borderRadius: "8px",
                 cursor: "pointer",
-                marginTop: "10px",
+                fontSize: "1rem",
+                fontWeight: "600"
               }}
             >
               Proceder al Pago
@@ -97,11 +139,16 @@ export default function CartPage() {
         </>
       )}
 
-      {/* ✅ Renderizar modal correcto según si hay usuario o no */}
-      {user ? (
-        <CheckoutModal open={showCheckout} setOpen={setShowCheckout} />
-      ) : (
-        <GuestCheckoutModal open={showCheckout} setOpen={setShowCheckout} />
+      {/* ✅ MODALES - Solo se muestran cuando showCheckout es true */}
+      {showCheckout && user && (
+        <CheckoutModal onClose={() => setShowCheckout(false)} />
+      )}
+
+      {showCheckout && !user && (
+        <GuestCheckoutModal 
+          open={showCheckout} 
+          setOpen={setShowCheckout} 
+        />
       )}
     </div>
   );

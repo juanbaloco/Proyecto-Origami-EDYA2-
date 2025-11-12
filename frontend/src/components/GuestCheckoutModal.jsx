@@ -10,10 +10,30 @@ export default function GuestCheckoutModal({ open, setOpen }) {
   const [form, setForm] = useState({
     nombreCompleto: "",
     email: "",
-    whatsapp: "",
+    telefono: "",
     direccion: "",
-    metodoPago: "efectivo"  // Por defecto: efectivo
   });
+  
+  const [metodoPago, setMetodoPago] = useState("nequi");
+
+  // ✅ Métodos de pago idénticos al CheckoutModal
+  const metodosPago = [
+    { value: "nequi", label: "Transferencia Nequi" },
+    { value: "contraentrega", label: "Contraentrega" }
+  ];
+
+  // ✅ Información de pago idéntica al CheckoutModal
+  const paymentInfo = {
+    nequi: {
+      title: "📱 Instrucciones para Transferencia Nequi",
+      details: [
+        { label: "Nombre:", value: "Juan José Baloco" },
+        { label: "Número de cuenta:", value: "305 408 1669" },
+        { label: "WhatsApp para enviar comprobante:", value: "+57 305 4081669" }
+      ],
+      note: "⚠️ Después de realizar la transferencia, envía el comprobante al WhatsApp indicado con tu nombre completo."
+    }
+  };
 
   function handleChange(e) {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -24,7 +44,7 @@ export default function GuestCheckoutModal({ open, setOpen }) {
     setError("");
 
     // Validaciones
-    if (!form.nombreCompleto || !form.email || !form.whatsapp || !form.direccion) {
+    if (!form.nombreCompleto || !form.email || !form.telefono || !form.direccion) {
       setError("Todos los campos son obligatorios");
       return;
     }
@@ -34,40 +54,48 @@ export default function GuestCheckoutModal({ open, setOpen }) {
       return;
     }
 
-    if (!/^\d{10,}$/.test(form.whatsapp.replace(/\D/g, ""))) {
-      setError("Número de WhatsApp inválido (mínimo 10 dígitos)");
+    if (!/^\d{10,}$/.test(form.telefono.replace(/\D/g, ""))) {
+      setError("Número de teléfono inválido (mínimo 10 dígitos)");
       return;
     }
 
     setSending(true);
+
     try {
-      // ✅ Enviar pedido al backend
       const orderData = {
-        guestInfo: form,
-        items: items.map((cartItem) => ({
-          producto_id: cartItem.producto_id,
-          nombre: cartItem.nombre,
-          precio: cartItem.precio,
-          cantidad: cartItem.cantidad
-        })),
-        total: total,
+        contacto: {
+          nombre: form.nombreCompleto,
+          email: form.email,
+          telefono: form.telefono
+        },
+        direccion: form.direccion,
+        metodoPago: metodoPago,
+        items: items.map((item) => ({
+          producto_id: item.producto_id,
+          cantidad: item.cantidad
+        }))
       };
 
+      console.log("📦 Enviando pedido:", orderData);
+
       const response = await apiCreateGuestOrder(orderData);
+      console.log("✅ Respuesta del servidor:", response);
 
-      console.log("📦 Pedido de invitado creado:", response);
-
-      // ✅ Limpiar carrito después de pedido exitoso
       clear();
 
-      // Mostrar mensaje de éxito
+      const metodoPagoLabel = metodosPago.find(m => m.value === metodoPago)?.label || metodoPago;
+      
       alert(
-        `✅ ¡Pedido confirmado!\n\nNúmero de pedido: ${response.order_id}\n\n${response.message}\n\nTotal: $${total.toFixed(2)}`
+        `✅ ¡Pedido confirmado!\n\n` +
+        `Número de pedido: ${response.pedido_id}\n` +
+        `Método de pago: ${metodoPagoLabel}\n` +
+        `${response.message}\n\n` +
+        `Total: $${total.toFixed(2)}`
       );
 
       setOpen(false);
     } catch (err) {
-      console.error("Error al procesar pedido:", err);
+      console.error("❌ Error al procesar pedido:", err);
       setError(err.message || "Error al procesar el pedido");
     } finally {
       setSending(false);
@@ -77,213 +105,302 @@ export default function GuestCheckoutModal({ open, setOpen }) {
   if (!open) return null;
 
   return (
-    <div className="modal-overlay" onClick={() => setOpen(false)}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <button className="modal-close" onClick={() => setOpen(false)}>
-          ✕
-        </button>
+    <div
+      className="modal-overlay"
+      onClick={() => setOpen(false)}
+      style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: "rgba(0, 0, 0, 0.7)",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        zIndex: 1000,
+      }}
+    >
+      <div
+        className="modal-content"
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          backgroundColor: "white",
+          padding: "30px",
+          borderRadius: "12px",
+          maxWidth: "500px",
+          width: "90%",
+          maxHeight: "90vh",
+          overflowY: "auto",
+        }}
+      >
+        <h2>🛒 Finalizar Compra como Invitado</h2>
 
-        <h2>Finalizar Compra</h2>
-
-        {/* Resumen del Pedido */}
-        <div style={{ marginBottom: "1.5rem", padding: "1rem", background: "#f5f5f5", borderRadius: "8px" }}>
-          <h3 style={{ marginBottom: "1rem" }}>Resumen del Pedido</h3>
-          {items.map((cartItem) => (
-            <div key={cartItem.producto_id} style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem" }}>
-              <span>{cartItem.nombre} × {cartItem.cantidad}</span>
-              <span>${(cartItem.precio * cartItem.cantidad).toFixed(2)}</span>
-            </div>
-          ))}
-          <div style={{ borderTop: "2px solid #ddd", marginTop: "1rem", paddingTop: "0.5rem", display: "flex", justifyContent: "space-between", fontWeight: "bold" }}>
-            <span>Total:</span>
-            <span>${total.toFixed(2)}</span>
+        {error && (
+          <div
+            className="error-message"
+            style={{
+              backgroundColor: "#fed7d7",
+              color: "#c53030",
+              padding: "12px",
+              borderRadius: "8px",
+              marginBottom: "16px",
+            }}
+          >
+            {error}
           </div>
-        </div>
+        )}
 
-        {/* Formulario */}
         <form onSubmit={onSubmit}>
-          {error && (
-            <div style={{ padding: "1rem", background: "#fee", color: "#c00", borderRadius: "6px", marginBottom: "1rem" }}>
-              {error}
-            </div>
-          )}
-
-          <div style={{ marginBottom: "1rem" }}>
-            <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500" }}>
-              Nombre Completo *
-            </label>
+          <div className="form-group" style={{ marginBottom: "16px" }}>
+            <label htmlFor="nombreCompleto">Nombre Completo *</label>
             <input
               type="text"
+              id="nombreCompleto"
               name="nombreCompleto"
               value={form.nombreCompleto}
               onChange={handleChange}
-              style={{ width: "100%", padding: "0.75rem", border: "1px solid #ccc", borderRadius: "6px" }}
               required
+              placeholder="Juan Pérez"
+              style={{
+                width: "100%",
+                padding: "10px",
+                borderRadius: "6px",
+                border: "1px solid #cbd5e0",
+                marginTop: "5px",
+              }}
             />
           </div>
 
-          <div style={{ marginBottom: "1rem" }}>
-            <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500" }}>
-              Email de Contacto *
-            </label>
+          <div className="form-group" style={{ marginBottom: "16px" }}>
+            <label htmlFor="email">Email *</label>
             <input
               type="email"
+              id="email"
               name="email"
               value={form.email}
               onChange={handleChange}
-              style={{ width: "100%", padding: "0.75rem", border: "1px solid #ccc", borderRadius: "6px" }}
               required
+              placeholder="ejemplo@correo.com"
+              style={{
+                width: "100%",
+                padding: "10px",
+                borderRadius: "6px",
+                border: "1px solid #cbd5e0",
+                marginTop: "5px",
+              }}
             />
           </div>
 
-          <div style={{ marginBottom: "1rem" }}>
-            <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500" }}>
-              WhatsApp para Contacto *
-            </label>
+          <div className="form-group" style={{ marginBottom: "16px" }}>
+            <label htmlFor="telefono">Teléfono / WhatsApp *</label>
             <input
               type="tel"
-              name="whatsapp"
-              value={form.whatsapp}
+              id="telefono"
+              name="telefono"
+              value={form.telefono}
               onChange={handleChange}
-              placeholder="+57 305 4081669"
-              style={{ width: "100%", padding: "0.75rem", border: "1px solid #ccc", borderRadius: "6px" }}
               required
+              placeholder="3001234567"
+              style={{
+                width: "100%",
+                padding: "10px",
+                borderRadius: "6px",
+                border: "1px solid #cbd5e0",
+                marginTop: "5px",
+              }}
             />
-            <small style={{ color: "#666", fontSize: "0.85rem" }}>Incluye el código de país</small>
           </div>
 
-          <div style={{ marginBottom: "1rem" }}>
-            <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500" }}>
-              Dirección de Envío *
-            </label>
+          <div className="form-group" style={{ marginBottom: "16px" }}>
+            <label htmlFor="direccion">Dirección de Entrega *</label>
             <textarea
+              id="direccion"
               name="direccion"
               value={form.direccion}
               onChange={handleChange}
-              rows="3"
-              style={{ width: "100%", padding: "0.75rem", border: "1px solid #ccc", borderRadius: "6px", fontFamily: "inherit" }}
               required
+              rows="3"
+              placeholder="Calle 123 #45-67, Apto 301"
+              style={{
+                width: "100%",
+                padding: "10px",
+                borderRadius: "6px",
+                border: "1px solid #cbd5e0",
+                marginTop: "5px",
+                resize: "vertical",
+              }}
             />
           </div>
 
+          {/* ✅ MÉTODO DE PAGO CON TABS (IGUAL AL CHECKOUT DE CLIENTE) */}
           <div style={{ marginBottom: "1.5rem" }}>
-            <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500" }}>
+            <strong style={{ display: "block", marginBottom: "0.75rem" }}>
               Método de Pago *
-            </label>
-            <select
-              name="metodoPago"
-              value={form.metodoPago}
-              onChange={handleChange}
-              style={{ width: "100%", padding: "0.75rem", border: "1px solid #ccc", borderRadius: "6px" }}
-              required
-            >
-              <option value="efectivo">Efectivo contra entrega</option>
-              <option value="transferencia">Transferencia Nequi</option>
-            </select>
+            </strong>
 
-            {/* Mostrar instrucciones de Nequi si ese método está seleccionado */}
-            {form.metodoPago === "transferencia" && (
+            {/* Tabs de métodos de pago */}
+            <div style={{ 
+              display: "flex", 
+              gap: "0.5rem",
+              marginBottom: "1rem"
+            }}>
+              {metodosPago.map((m) => (
+                <button
+                  key={m.value}
+                  type="button"
+                  onClick={() => setMetodoPago(m.value)}
+                  style={{
+                    flex: 1,
+                    padding: "0.75rem",
+                    border: "1px solid",
+                    borderColor: metodoPago === m.value ? "#4CAF50" : "#ddd",
+                    borderRadius: "8px",
+                    background: metodoPago === m.value ? "#4CAF50" : "white",
+                    color: metodoPago === m.value ? "white" : "#333",
+                    cursor: "pointer",
+                    fontWeight: metodoPago === m.value ? "600" : "400",
+                    fontSize: "0.9rem"
+                  }}
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Información de Nequi */}
+            {metodoPago === "nequi" && paymentInfo.nequi && (
               <div style={{ 
-                marginTop: "1rem", 
+                background: "#e7f3e7", 
                 padding: "1rem", 
-                background: "#e8f5e9", 
-                borderRadius: "6px",
-                border: "1px solid #4caf50"
+                borderRadius: "8px",
+                border: "1px solid #b7e4b7"
               }}>
-                <h4 style={{ margin: "0 0 0.75rem 0", color: "#2e7d32" }}>
-                  📱 Instrucciones para Transferencia Nequi
-                </h4>
-                <div style={{ fontSize: "0.95rem", lineHeight: "1.6" }}>
-                  <p style={{ margin: "0.5rem 0" }}>
-                    <strong>Nombre:</strong> Juan Jose Baloco
-                  </p>
-                  <p style={{ margin: "0.5rem 0" }}>
-                    <strong>Número de cuenta:</strong> 305 4081669
-                  </p>
-                  <p style={{ margin: "0.5rem 0" }}>
-                    <strong>WhatsApp para enviar comprobante:</strong> +57 305 4081669
-                  </p>
-                  <p style={{ margin: "1rem 0 0 0", color: "#555", fontSize: "0.9rem" }}>
-                    💡 Después de realizar la transferencia, envía el comprobante al WhatsApp indicado con tu nombre completo.
-                  </p>
-                </div>
+                <strong style={{ display: "block", marginBottom: "0.75rem", color: "#2e7d2e" }}>
+                  {paymentInfo.nequi.title}
+                </strong>
+                {paymentInfo.nequi.details.map((detail, idx) => (
+                  <div key={idx} style={{ marginBottom: "0.5rem", fontSize: "0.9rem" }}>
+                    <strong>{detail.label}</strong> {detail.value}
+                  </div>
+                ))}
+                <p style={{ 
+                  margin: "0.75rem 0 0 0", 
+                  fontSize: "0.85rem", 
+                  color: "#856404",
+                  background: "#fff3cd",
+                  padding: "0.5rem",
+                  borderRadius: "4px"
+                }}>
+                  {paymentInfo.nequi.note}
+                </p>
+              </div>
+            )}
+
+            {/* Información de Contraentrega */}
+            {metodoPago === "contraentrega" && (
+              <div style={{ 
+                background: "#e7f3e7", 
+                padding: "1rem", 
+                borderRadius: "8px",
+                border: "1px solid #b7e4b7"
+              }}>
+                <strong style={{ display: "block", marginBottom: "0.75rem", color: "#2e7d2e" }}>
+                  💵 Pago Contraentrega
+                </strong>
+                <p style={{ margin: 0, fontSize: "0.9rem" }}>
+                  Pagarás en efectivo cuando recibas tu pedido.
+                </p>
               </div>
             )}
           </div>
 
-          <button
-            type="submit"
-            disabled={sending}
+          {/* Resumen del pedido */}
+          <div
+            className="order-summary"
             style={{
-              width: "100%",
-              padding: "1rem",
-              background: sending ? "#ccc" : "#4caf50",
-              color: "white",
-              border: "none",
+              marginTop: "20px",
+              padding: "15px",
+              backgroundColor: "#f7fafc",
               borderRadius: "8px",
-              fontSize: "1rem",
-              fontWeight: "600",
-              cursor: sending ? "not-allowed" : "pointer",
-              transition: "background 0.3s"
             }}
           >
-            {sending ? "Procesando..." : `Confirmar Pedido ($${total.toFixed(2)})`}
-          </button>
+            <h3 style={{ marginBottom: "10px" }}>Resumen del Pedido</h3>
+            <ul style={{ listStyle: "none", padding: 0 }}>
+              {items.map((item) => (
+                <li
+                  key={item.producto_id}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    marginBottom: "8px",
+                  }}
+                >
+                  <span>
+                    {item.nombre} x {item.cantidad}
+                  </span>
+                  <span>${(item.precio * item.cantidad).toFixed(2)}</span>
+                </li>
+              ))}
+            </ul>
+            <p
+              style={{
+                fontWeight: "bold",
+                fontSize: "18px",
+                marginTop: "10px",
+                borderTop: "2px solid #cbd5e0",
+                paddingTop: "10px",
+              }}
+            >
+              Total: ${total.toFixed(2)}
+            </p>
+          </div>
 
-          <p style={{ textAlign: "center", color: "#666", fontSize: "0.85rem", marginTop: "1rem" }}>
-            * Al confirmar, aceptas nuestros términos y condiciones
-          </p>
+          {/* Botones de acción */}
+          <div
+            className="modal-actions"
+            style={{
+              marginTop: "20px",
+              display: "flex",
+              gap: "10px",
+            }}
+          >
+            <button
+              type="submit"
+              disabled={sending}
+              style={{
+                flex: 1,
+                padding: "12px",
+                backgroundColor: sending ? "#cbd5e0" : "#48bb78",
+                color: "white",
+                border: "none",
+                borderRadius: "8px",
+                cursor: sending ? "not-allowed" : "pointer",
+                fontSize: "16px",
+              }}
+            >
+              {sending ? "Procesando..." : "Confirmar Pedido"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              disabled={sending}
+              style={{
+                flex: 1,
+                padding: "12px",
+                backgroundColor: "#e2e8f0",
+                color: "#2d3748",
+                border: "none",
+                borderRadius: "8px",
+                cursor: sending ? "not-allowed" : "pointer",
+                fontSize: "16px",
+              }}
+            >
+              Cancelar
+            </button>
+          </div>
         </form>
       </div>
-
-      <style>{`
-        .modal-overlay {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: rgba(0, 0, 0, 0.5);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 1000;
-          padding: 1rem;
-        }
-        
-        .modal-content {
-          background: white;
-          border-radius: 12px;
-          padding: 2rem;
-          max-width: 600px;
-          width: 100%;
-          max-height: 90vh;
-          overflow-y: auto;
-          position: relative;
-        }
-        
-        .modal-close {
-          position: absolute;
-          top: 1rem;
-          right: 1rem;
-          background: none;
-          border: none;
-          font-size: 1.5rem;
-          cursor: pointer;
-          color: #666;
-          width: 32px;
-          height: 32px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          border-radius: 50%;
-          transition: background 0.2s;
-        }
-        
-        .modal-close:hover {
-          background: #f0f0f0;
-        }
-      `}</style>
     </div>
   );
-}
+} 
