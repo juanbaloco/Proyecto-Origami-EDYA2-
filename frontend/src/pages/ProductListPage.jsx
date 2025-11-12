@@ -11,7 +11,7 @@ export default function ProductsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [loading, setLoading] = useState(true);
-  const { items, add } = useCart();
+  const { items, add, discountRate } = useCart();
   const { user } = useContext(AuthContext);
 
   useEffect(() => {
@@ -69,6 +69,14 @@ export default function ProductsPage() {
         <h1 style={{ fontSize: "28px", marginBottom: "30px", textAlign: "center", color: "#2d3748" }}>
           Productos de Origami
         </h1>
+
+        {/* Banner de fidelización si hay descuento activo */}
+        {discountRate > 0 && (
+          <div style={{ marginBottom: 20, padding: 16, background: '#e6f6ff', border: '1px solid #bfe9ff', borderRadius: 8, textAlign: 'center' }}>
+            <strong style={{ color: '#0369a1' }}>🎁 ¡Felicidades!</strong>
+            <span style={{ marginLeft: 8, color: '#075985' }}>Tienes {Math.round(discountRate * 100)}% de descuento en tu carrito.</span>
+          </div>
+        )}
 
         {/* ✅ Barra de filtros */}
         <div style={{ display: "flex", gap: "15px", marginBottom: "30px", flexWrap: "wrap" }}>

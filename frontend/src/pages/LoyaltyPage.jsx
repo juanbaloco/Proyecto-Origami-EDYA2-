@@ -1,4 +1,4 @@
-import { useState, useContext } from "react";
+import { useState, useContext, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../App";
 import { useCart } from "../contexts/CartContext";
@@ -10,9 +10,18 @@ export default function LoyaltyPage() {
   const [form, setForm] = useState({ nombre: "", email: "", telefono: "" });
   const [loading, setLoading] = useState(false);
   const [accepted, setAccepted] = useState(false);
+  const [showAcceptedModal, setShowAcceptedModal] = useState(false);
   const nav = useNavigate();
   const { user } = useContext(AuthContext);
   const { applyFidelizacionDiscount } = useCart();
+  const { discountRate } = useCart();
+
+  // Si ya existe un descuento aplicado (persistido en localStorage), marcar como aceptado
+  useEffect(() => {
+    if (discountRate && parseFloat(discountRate) >= 0.1) {
+      setAccepted(true);
+    }
+  }, [discountRate]);
 
   function handleSubscribe() {
     setShowModal(true);
@@ -23,29 +32,18 @@ export default function LoyaltyPage() {
     const correo = user?.email || form.email;
     if (!correo) return alert('Por favor ingresa tu correo o inicia sesión');
 
-    try {
+  try {
       setLoading(true);
-      // Intentamos llamar al backend; si no existe el endpoint (404) simulamos el pago localmente.
-      try {
-        const res = await apiPayFidelizacion(correo);
-        console.log('Pago fidelizacion respuesta (backend):', res);
-      } catch (errApi) {
-        const msg = (errApi && errApi.message) ? String(errApi.message) : '';
-        // Si el backend responde Not Found / 404, hacemos fallback simulado.
-        if (msg.includes('Not Found') || msg.includes('404') || msg.toLowerCase().includes('not found')) {
-          console.warn('Endpoint /fidelizacion/{correo}/pagar no encontrado en backend — usando simulación local');
-        } else {
-          // rethrow para ser capturado por el outer catch
-          throw errApi;
-        }
-      }
+      const res = await apiPayFidelizacion(correo);
+      console.log('Pago fidelizacion respuesta:', res);
 
-      // aplicar descuento del 10% en el carrito (real o simulado)
+      // aplicar descuento del 10% en el carrito
       applyFidelizacionDiscount(0.10);
 
-      // mostrar modal de aceptación y redirigir al catálogo
-      setAccepted(true);
-      setShowModal(false);
+  // marcar como aceptado y mostrar modal de aceptación
+  setAccepted(true);
+  setShowAcceptedModal(true);
+  setShowModal(false);
     } catch (err) {
       console.error('Error al procesar pago de fidelizacion', err);
       alert('Ocurrió un error procesando el pago. Intenta de nuevo.');
@@ -58,7 +56,7 @@ export default function LoyaltyPage() {
 
   function goToProducts() {
     // redirigir al listado de productos
-    nav('/productos');
+    nav('/products');
   }
 
   return (
@@ -79,24 +77,36 @@ export default function LoyaltyPage() {
         <li>✅ Atención prioritaria</li>
       </ul>
 
-      <button
-        onClick={handleSubscribe}
-        style={{
-          padding: "1rem 3rem",
-          background: "#667eea",
-          color: "white",
-          border: "none",
-          borderRadius: "8px",
-          fontSize: "1.1rem",
-          fontWeight: "600",
-          cursor: "pointer",
-          transition: "background 0.3s"
-        }}
-        onMouseEnter={(e) => (e.target.style.background = "#5568d3")}
-        onMouseLeave={(e) => (e.target.style.background = "#667eea")}
-      >
-        Suscribirme Ahora
-      </button>
+      {!accepted ? (
+        <button
+          onClick={handleSubscribe}
+          style={{
+            padding: "1rem 3rem",
+            background: "#667eea",
+            color: "white",
+            border: "none",
+            borderRadius: "8px",
+            fontSize: "1.1rem",
+            fontWeight: "600",
+            cursor: "pointer",
+            transition: "background 0.3s"
+          }}
+          onMouseEnter={(e) => (e.target.style.background = "#5568d3")}
+          onMouseLeave={(e) => (e.target.style.background = "#667eea")}
+        >
+          Suscribirme Ahora
+        </button>
+      ) : (
+        <div style={{ padding: '1.25rem', background: '#f0f9ff', borderRadius: 8, border: '1px solid #cfe8ff', marginBottom: '1rem' }}>
+          <h3 style={{ margin: 0, color: '#0369a1' }}>🎉 Ya estás suscrito</h3>
+          <p style={{ margin: '0.5rem 0 0 0', color: '#075985' }}>Tienes derecho a 10% de descuento y más beneficios próximamente.</p>
+          <div style={{ marginTop: 12 }}>
+            <button onClick={goToProducts} style={{ padding: '0.6rem 1rem', background: '#3b82f6', color: 'white', border: 'none', borderRadius: 6, cursor: 'pointer' }}>
+              Ir a productos
+            </button>
+          </div>
+        </div>
+      )}
 
       {showModal && (
         <div
@@ -244,7 +254,7 @@ export default function LoyaltyPage() {
       )}
 
       {/* Modal que aparece cuando la suscripción fue aceptada */}
-      {accepted && (
+      {showAcceptedModal && (
         <div
           style={{
             position: "fixed",
@@ -273,7 +283,7 @@ export default function LoyaltyPage() {
             <p>Se le aplicó un 10% de descuento en su carrito. ¡Gracias por unirse!</p>
             <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
               <button
-                onClick={() => setAccepted(false)}
+                onClick={() => setShowAcceptedModal(false)}
                 style={{ flex: 1, padding: '0.75rem', borderRadius: 8, border: 'none', background: '#e0e0e0', cursor: 'pointer' }}
               >Cerrar</button>
               <button

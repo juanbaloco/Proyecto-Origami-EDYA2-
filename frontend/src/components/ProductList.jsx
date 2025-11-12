@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
 import { apiGetProducts } from "../api";
+import { useCart } from "../contexts/CartContext";
 
 export default function ProductsPage() {
   const [products, setProducts] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
+  const { discountRate } = useCart();
 
   useEffect(() => {
     loadProducts();
@@ -28,6 +30,13 @@ export default function ProductsPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#f5f6fa", padding: "20px" }}>
+      {discountRate > 0 && (
+        <div style={{ maxWidth: '1200px', margin: '0 auto 16px auto' }}>
+          <div style={{ padding: 12, background: '#e6f6ff', border: '1px solid #bfe9ff', borderRadius: 8, textAlign: 'center' }}>
+            <strong style={{ color: '#0369a1' }}>🎁  Tienes {Math.round(discountRate * 100)}% de descuento</strong>
+          </div>
+        </div>
+      )}
       {/* Header simple sin crear productos */}
       <div style={{
         display: "flex",
